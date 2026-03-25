@@ -1,10 +1,11 @@
 "use client";
 
-import { use, useState } from "react";
+import { use, useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { useMutation } from "convex/react";
 import { api } from "@convex/_generated/api";
 import { useSiteContext } from "@/context/site-context";
+import { deduplicatePages } from "@/lib/dedup-pages";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -16,7 +17,15 @@ import {
   Code,
   Loader2,
   Plus,
+  LayoutGrid,
+  List,
+  ChevronRight,
+  ExternalLink as ExternalLinkIcon,
+  Globe,
 } from "lucide-react";
+import type { CrawlPageResult } from "@/types/canvas";
+
+type ViewMode = "list" | "grid";
 
 export default function SiteOverview({
   params,
@@ -30,41 +39,27 @@ export default function SiteOverview({
   const storeCrawl = useMutation(api.crawls.storeCrawlResult);
   const [continueCrawling, setContinueCrawling] = useState(false);
   const [continueProgress, setContinueProgress] = useState({ current: 0, total: 0 });
+  const [viewMode, setViewMode] = useState<ViewMode>("list");
 
   if (!crawlResult) return null;
 
-  // Deduplicate pages by normalized URL
-  const seen = new Set<string>();
-  const pages = crawlResult.pages.filter((p) => {
-    const key = p.url.replace(/\/+$/, "");
-    if (seen.has(key)) return false;
-    seen.add(key);
-    return true;
-  });
+  const pages = deduplicatePages(crawlResult.pages);
 
   // Aggregate stats
-  const totalLinks = pages.reduce(
-    (sum, p) => sum + p.outgoingLinks.length,
-    0
-  );
-  const totalImages = pages.reduce((sum, p) => sum + p.seo.imageCount, 0);
-  const missingAlt = pages.reduce(
-    (sum, p) => sum + p.seo.imagesWithoutAlt,
-    0
-  );
-  const missingDescription = pages.filter(
-    (p) => !p.seo.meta.description
-  ).length;
-  const hasStructuredData = pages.filter(
-    (p) => p.seo.hasStructuredData
-  ).length;
+  const totalInternalLinks = pages.reduce((s, p) => s + p.seo.internalLinkCount, 0);
+  const totalExternalLinks = pages.reduce((s, p) => s + p.seo.externalLinkCount, 0);
+  const totalImages = pages.reduce((s, p) => s + p.seo.imageCount, 0);
+  const missingAlt = pages.reduce((s, p) => s + p.seo.imagesWithoutAlt, 0);
+  const missingDescription = pages.filter((p) => !p.seo.meta.description).length;
+  const hasStructuredData = pages.filter((p) => p.seo.hasStructuredData).length;
   const avgWordCount = Math.round(
-    pages.reduce((sum, p) => sum + p.seo.wordCount, 0) / pages.length
+    pages.reduce((s, p) => s + p.seo.wordCount, 0) / pages.length
   );
 
   const stats = [
     { label: "Pages", value: pages.length, icon: FileText },
-    { label: "Links", value: totalLinks, icon: Link2 },
+    { label: "Internal Links", value: totalInternalLinks, icon: Link2 },
+    { label: "External Links", value: totalExternalLinks, icon: ExternalLinkIcon },
     { label: "Images", value: totalImages, icon: Image },
     {
       label: "Missing Alt",
@@ -78,8 +73,30 @@ export default function SiteOverview({
       icon: Search,
       warning: missingDescription > 0,
     },
-    { label: "Structured Data", value: hasStructuredData, icon: Code },
   ];
+
+  // Group pages by top-level route segment
+  const grouped = useMemo(() => {
+    const groups = new Map<string, CrawlPageResult[]>();
+    for (const page of pages) {
+      try {
+        const pathname = new URL(page.url).pathname;
+        const segments = pathname.split("/").filter(Boolean);
+        const group = segments.length === 0 ? "/" : `/${segments[0]}`;
+        if (!groups.has(group)) groups.set(group, []);
+        groups.get(group)!.push(page);
+      } catch {
+        if (!groups.has("/")) groups.set("/", []);
+        groups.get("/")!.push(page);
+      }
+    }
+    // Sort groups: root first, then alphabetical
+    return [...groups.entries()].sort(([a], [b]) => {
+      if (a === "/") return -1;
+      if (b === "/") return 1;
+      return a.localeCompare(b);
+    });
+  }, [pages]);
 
   async function handleContinueCrawl() {
     if (discoveredUrls.length === 0) return;
@@ -120,7 +137,6 @@ export default function SiteOverview({
             if (event.type === "page_crawled") {
               setContinueProgress({ current: event.index, total: event.total });
             } else if (event.type === "complete" && event.result) {
-              // Merge new pages with existing and store as new crawl
               const existingUrls = new Set(crawlResult!.pages.map((p) => p.url));
               const newPages = event.result.pages.filter(
                 (p: any) => !existingUrls.has(p.url)
@@ -134,7 +150,6 @@ export default function SiteOverview({
                 discoveredUrls: remainingDiscovered,
               });
 
-              // Force reload to pick up new data from Convex
               window.location.reload();
               return;
             }
@@ -157,18 +172,33 @@ export default function SiteOverview({
     if (pagePath) {
       router.push(`/site/${encodedRoot}/${pagePath.slice(1)}`);
     } else {
-      // For root page, we're already on the overview, so navigate to detail
       router.push(`/site/${encodedRoot}/_root`);
     }
   }
 
   return (
     <div className="p-6 space-y-6">
-      <div>
-        <h2 className="text-lg font-semibold">Site Overview</h2>
-        <p className="text-sm text-muted-foreground">
-          Summary of {new URL(rootUrl).hostname}
-        </p>
+      <div className="flex items-start justify-between">
+        <div>
+          <h2 className="text-lg font-semibold">Site Overview</h2>
+          <p className="text-sm text-muted-foreground">
+            {new URL(rootUrl).hostname} &middot; {pages.length} pages &middot; avg {avgWordCount} words/page
+          </p>
+        </div>
+        <div className="flex items-center gap-1 rounded-lg border border-border bg-card p-0.5">
+          <button
+            onClick={() => setViewMode("list")}
+            className={`rounded p-1.5 transition-colors ${viewMode === "list" ? "bg-accent text-foreground" : "text-muted-foreground hover:text-foreground"}`}
+          >
+            <List className="h-4 w-4" />
+          </button>
+          <button
+            onClick={() => setViewMode("grid")}
+            className={`rounded p-1.5 transition-colors ${viewMode === "grid" ? "bg-accent text-foreground" : "text-muted-foreground hover:text-foreground"}`}
+          >
+            <LayoutGrid className="h-4 w-4" />
+          </button>
+        </div>
       </div>
 
       {/* Stats grid */}
@@ -180,31 +210,15 @@ export default function SiteOverview({
           >
             <div className="flex items-center gap-1.5">
               <stat.icon
-                className={`h-3.5 w-3.5 ${
-                  stat.warning
-                    ? "text-amber-500"
-                    : "text-muted-foreground"
-                }`}
+                className={`h-3.5 w-3.5 ${stat.warning ? "text-amber-500" : "text-muted-foreground"}`}
               />
-              <span className="text-xs text-muted-foreground">
-                {stat.label}
-              </span>
+              <span className="text-xs text-muted-foreground">{stat.label}</span>
             </div>
-            <div
-              className={`text-xl font-semibold font-mono ${
-                stat.warning ? "text-amber-500" : ""
-              }`}
-            >
+            <div className={`text-xl font-semibold font-mono ${stat.warning ? "text-amber-500" : ""}`}>
               {stat.value}
             </div>
           </div>
         ))}
-      </div>
-
-      {/* Avg word count */}
-      <div className="text-xs text-muted-foreground">
-        Average word count: <span className="font-mono">{avgWordCount}</span>{" "}
-        words per page
       </div>
 
       {/* Continue crawl banner */}
@@ -224,11 +238,7 @@ export default function SiteOverview({
               Crawling {continueProgress.current}/{continueProgress.total}...
             </div>
           ) : (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleContinueCrawl}
-            >
+            <Button variant="outline" size="sm" onClick={handleContinueCrawl}>
               <Plus className="h-4 w-4" />
               Crawl Remaining
             </Button>
@@ -236,58 +246,171 @@ export default function SiteOverview({
         </div>
       )}
 
-      {/* Page thumbnails */}
-      <div>
-        <h3 className="text-sm font-medium mb-3">Crawled Pages</h3>
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-          {pages.map((page) => (
-            <button
-              key={page.url}
-              onClick={() => handlePageClick(page.url)}
-              className="group rounded-lg border border-border bg-card overflow-hidden text-left transition-colors hover:border-primary/50"
-            >
-              {showImages && (
-                <div className="aspect-video bg-muted overflow-hidden">
-                  {page.screenshot ? (
-                    <img
-                      src={page.screenshot}
-                      alt={page.title}
-                      className="h-full w-full object-cover object-top transition-transform group-hover:scale-105"
-                    />
-                  ) : (
-                    <div className="h-full w-full flex items-center justify-center flex-col gap-1">
-                      <FileText className="h-6 w-6 text-muted-foreground/40" />
-                      <span className="text-[10px] text-muted-foreground/50 font-mono truncate max-w-[120px]">
-                        {(() => { try { return new URL(page.url).pathname; } catch { return page.url; } })()}
-                      </span>
-                    </div>
-                  )}
-                </div>
-              )}
-              <div className="p-3 space-y-1">
-                <div className="text-sm font-medium truncate">
-                  {page.title || "Untitled"}
-                </div>
-                <div className="text-xs text-muted-foreground font-mono truncate">
-                  {new URL(page.url).pathname}
-                </div>
-                <div className="flex gap-1.5 pt-1">
-                  {!page.seo.meta.description && (
-                    <Badge variant="outline" className="text-[10px] px-1 py-0 text-amber-500 border-amber-500/30">
-                      No meta desc
-                    </Badge>
-                  )}
-                  {page.seo.imagesWithoutAlt > 0 && (
-                    <Badge variant="outline" className="text-[10px] px-1 py-0 text-amber-500 border-amber-500/30">
-                      {page.seo.imagesWithoutAlt} img no alt
-                    </Badge>
-                  )}
-                </div>
+      {/* Pages */}
+      {viewMode === "list" ? (
+        <div className="space-y-6">
+          {grouped.map(([group, groupPages]) => (
+            <div key={group}>
+              <div className="flex items-center gap-2 mb-2">
+                <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider font-mono">
+                  {group}
+                </span>
+                <span className="text-xs text-muted-foreground/50">
+                  {groupPages.length} {groupPages.length === 1 ? "page" : "pages"}
+                </span>
               </div>
-            </button>
+              <div className="rounded-lg border border-border bg-card divide-y divide-border">
+                {groupPages.map((page) => (
+                  <PageListItem
+                    key={page.url}
+                    page={page}
+                    onClick={() => handlePageClick(page.url)}
+                  />
+                ))}
+              </div>
+            </div>
           ))}
         </div>
-      </div>
+      ) : (
+        <div>
+          <h3 className="text-sm font-medium mb-3">Crawled Pages</h3>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            {pages.map((page) => (
+              <PageGridItem
+                key={page.url}
+                page={page}
+                showImages={showImages}
+                onClick={() => handlePageClick(page.url)}
+              />
+            ))}
+          </div>
+        </div>
+      )}
     </div>
+  );
+}
+
+function PageListItem({ page, onClick }: { page: CrawlPageResult; onClick: () => void }) {
+  let pathname = "/";
+  try { pathname = new URL(page.url).pathname; } catch {}
+
+  const wordCount = page.seo.wordCount;
+  const hasOg = !!page.seo.meta.ogTitle;
+  const hasDesc = !!page.seo.meta.description;
+  const lang = page.seo.meta.language;
+
+  return (
+    <button
+      onClick={onClick}
+      className="flex w-full items-start gap-3 p-3 text-left transition-colors hover:bg-accent/50 group"
+    >
+      <div className="flex-1 min-w-0 space-y-1">
+        <div className="flex items-center gap-2">
+          <span className="text-sm font-medium truncate">
+            {page.title || "Untitled"}
+          </span>
+          {lang && (
+            <Badge variant="outline" className="text-[10px] px-1 py-0 shrink-0">
+              {lang}
+            </Badge>
+          )}
+        </div>
+        <div className="text-xs text-muted-foreground font-mono truncate">
+          {pathname}
+        </div>
+        {/* Mini summary */}
+        <div className="flex items-center gap-3 text-[11px] text-muted-foreground">
+          <span>{wordCount} words</span>
+          <span>{page.seo.internalLinkCount} links</span>
+          <span>{page.seo.imageCount} imgs</span>
+          {page.seo.headings.filter(h => h.tag === "h1").length > 0 && (
+            <span className="truncate max-w-[200px]">
+              H1: {page.seo.headings.find(h => h.tag === "h1")?.text}
+            </span>
+          )}
+        </div>
+        {/* Issue badges */}
+        <div className="flex gap-1.5">
+          {!hasDesc && (
+            <Badge variant="outline" className="text-[10px] px-1 py-0 text-amber-500 border-amber-500/30">
+              No meta desc
+            </Badge>
+          )}
+          {!hasOg && (
+            <Badge variant="outline" className="text-[10px] px-1 py-0 text-amber-500 border-amber-500/30">
+              No OG tags
+            </Badge>
+          )}
+          {page.seo.imagesWithoutAlt > 0 && (
+            <Badge variant="outline" className="text-[10px] px-1 py-0 text-amber-500 border-amber-500/30">
+              {page.seo.imagesWithoutAlt} img no alt
+            </Badge>
+          )}
+          {page.seo.hasStructuredData && (
+            <Badge variant="outline" className="text-[10px] px-1 py-0 text-emerald-500 border-emerald-500/30">
+              Schema
+            </Badge>
+          )}
+        </div>
+      </div>
+      <ChevronRight className="h-4 w-4 text-muted-foreground/30 shrink-0 mt-1 group-hover:text-foreground transition-colors" />
+    </button>
+  );
+}
+
+function PageGridItem({
+  page,
+  showImages,
+  onClick,
+}: {
+  page: CrawlPageResult;
+  showImages: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      className="group rounded-lg border border-border bg-card overflow-hidden text-left transition-colors hover:border-primary/50"
+    >
+      {showImages && (
+        <div className="aspect-video bg-muted overflow-hidden">
+          {page.screenshot ? (
+            <img
+              src={page.screenshot}
+              alt={page.title}
+              className="h-full w-full object-cover object-top transition-transform group-hover:scale-105"
+            />
+          ) : (
+            <div className="h-full w-full flex items-center justify-center flex-col gap-1">
+              <FileText className="h-6 w-6 text-muted-foreground/40" />
+              <span className="text-[10px] text-muted-foreground/50 font-mono truncate max-w-[120px]">
+                {(() => { try { return new URL(page.url).pathname; } catch { return page.url; } })()}
+              </span>
+            </div>
+          )}
+        </div>
+      )}
+      <div className="p-3 space-y-1">
+        <div className="text-sm font-medium truncate">{page.title || "Untitled"}</div>
+        <div className="text-xs text-muted-foreground font-mono truncate">
+          {new URL(page.url).pathname}
+        </div>
+        <div className="text-[11px] text-muted-foreground">
+          {page.seo.wordCount} words &middot; {page.seo.internalLinkCount} links
+        </div>
+        <div className="flex gap-1.5 pt-1">
+          {!page.seo.meta.description && (
+            <Badge variant="outline" className="text-[10px] px-1 py-0 text-amber-500 border-amber-500/30">
+              No meta desc
+            </Badge>
+          )}
+          {page.seo.imagesWithoutAlt > 0 && (
+            <Badge variant="outline" className="text-[10px] px-1 py-0 text-amber-500 border-amber-500/30">
+              {page.seo.imagesWithoutAlt} img no alt
+            </Badge>
+          )}
+        </div>
+      </div>
+    </button>
   );
 }

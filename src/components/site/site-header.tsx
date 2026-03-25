@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { useSiteContext } from "@/context/site-context";
+import { deduplicatePages } from "@/lib/dedup-pages";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { Separator } from "@/components/ui/separator";
@@ -33,6 +34,10 @@ export function SiteHeader({ rootUrl }: { rootUrl: string }) {
     setShowImages,
   } = useSiteContext();
   const [chatOpen, setChatOpen] = useState(false);
+  const pageCount = useMemo(() => {
+    if (!crawlResult) return 0;
+    return deduplicatePages(crawlResult.pages).length;
+  }, [crawlResult]);
 
   let domain = "";
   try {
@@ -70,7 +75,7 @@ export function SiteHeader({ rootUrl }: { rootUrl: string }) {
 
       {crawlResult && (
         <span className="text-xs text-muted-foreground">
-          {crawlResult.pages.length} pages
+          {pageCount} pages
         </span>
       )}
 

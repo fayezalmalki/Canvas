@@ -3,6 +3,7 @@
 import { useState, useMemo } from "react";
 import { useSiteContext } from "@/context/site-context";
 import { buildUrlTree, filterTree } from "@/lib/url-tree";
+import { deduplicatePages } from "@/lib/dedup-pages";
 import { UrlTree } from "./url-tree";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -12,10 +13,15 @@ export function SiteSidebar() {
   const { crawlResult } = useSiteContext();
   const [search, setSearch] = useState("");
 
-  const tree = useMemo(() => {
-    if (!crawlResult) return null;
-    return buildUrlTree(crawlResult.pages);
+  const dedupedPages = useMemo(() => {
+    if (!crawlResult) return [];
+    return deduplicatePages(crawlResult.pages);
   }, [crawlResult]);
+
+  const tree = useMemo(() => {
+    if (dedupedPages.length === 0) return null;
+    return buildUrlTree(dedupedPages);
+  }, [dedupedPages]);
 
   const filteredTree = useMemo(() => {
     if (!tree) return null;
@@ -41,7 +47,7 @@ export function SiteSidebar() {
           />
         </div>
         <div className="text-xs text-muted-foreground">
-          {crawlResult.pages.length} pages crawled
+          {dedupedPages.length} pages crawled
         </div>
       </div>
 
