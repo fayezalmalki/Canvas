@@ -33,7 +33,14 @@ export default function SiteOverview({
 
   if (!crawlResult) return null;
 
-  const { pages } = crawlResult;
+  // Deduplicate pages by normalized URL
+  const seen = new Set<string>();
+  const pages = crawlResult.pages.filter((p) => {
+    const key = p.url.replace(/\/+$/, "");
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
 
   // Aggregate stats
   const totalLinks = pages.reduce(

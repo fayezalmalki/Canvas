@@ -9,19 +9,24 @@ export interface UrlTreeNode {
   children: UrlTreeNode[];
 }
 
+function normalizeUrl(url: string): string {
+  return url.replace(/\/+$/, "");
+}
+
 export function buildUrlTree(pages: CrawlPageResult[]): UrlTreeNode {
+  // Deduplicate pages by normalized URL
   const crawledUrls = new Map<string, CrawlPageResult>();
   for (const page of pages) {
-    crawledUrls.set(page.url, page);
+    const key = normalizeUrl(page.url);
+    if (!crawledUrls.has(key)) {
+      crawledUrls.set(key, page);
+    }
   }
 
-  // Collect all known URLs (crawled + outgoing links)
+  // Only include crawled pages in the tree (not every outgoing link)
   const allUrls = new Set<string>();
-  for (const page of pages) {
-    allUrls.add(page.url);
-    for (const link of page.outgoingLinks) {
-      allUrls.add(link.url);
-    }
+  for (const key of crawledUrls.keys()) {
+    allUrls.add(crawledUrls.get(key)!.url);
   }
 
   const root: UrlTreeNode = {
@@ -43,7 +48,7 @@ export function buildUrlTree(pages: CrawlPageResult[]): UrlTreeNode {
 
     const pathname = parsed.pathname || "/";
     const segments = pathname === "/" ? [] : pathname.split("/").filter(Boolean);
-    const page = crawledUrls.get(urlStr);
+    const page = crawledUrls.get(normalizeUrl(urlStr));
 
     let current = root;
 
