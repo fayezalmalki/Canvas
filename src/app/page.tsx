@@ -2,10 +2,11 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { useMutation } from "convex/react";
+import { api } from "@convex/_generated/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
-import { setCrawlResult } from "@/lib/crawl-store";
 import {
   Globe,
   Loader2,
@@ -23,6 +24,7 @@ interface CrawledPage {
 
 export default function Home() {
   const router = useRouter();
+  const storeCrawl = useMutation(api.crawls.storeCrawlResult);
   const [url, setUrl] = useState("");
   const [maxDepth, setMaxDepth] = useState(2);
   const [maxPages, setMaxPages] = useState(20);
@@ -92,7 +94,10 @@ export default function Home() {
               ]);
               setCrawlCount({ current: event.index, total: event.total });
             } else if (event.type === "complete" && event.result) {
-              setCrawlResult(normalizedUrl, event.result);
+              await storeCrawl({
+                rootUrl: normalizedUrl,
+                pages: event.result.pages,
+              });
               router.push(`/site/${encodeURIComponent(normalizedUrl)}`);
               return;
             } else if (event.type === "error") {

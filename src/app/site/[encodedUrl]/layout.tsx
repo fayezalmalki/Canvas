@@ -2,12 +2,13 @@
 
 import { use } from "react";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
-import { SiteProvider, useSiteContext } from "@/context/site-context";
-import { getCrawlResult } from "@/lib/crawl-store";
+import { useEffect } from "react";
+import { useQuery } from "convex/react";
+import { api } from "@convex/_generated/api";
+import { SiteProvider } from "@/context/site-context";
 import { SiteHeader } from "@/components/site/site-header";
 import { SiteSidebar } from "@/components/site/site-sidebar";
-import type { CrawlResult } from "@/types/canvas";
+import { useSiteContext } from "@/context/site-context";
 
 function SiteLayoutInner({
   rootUrl,
@@ -43,20 +44,26 @@ export default function SiteLayout({
   const { encodedUrl } = use(params);
   const rootUrl = decodeURIComponent(encodedUrl);
   const router = useRouter();
-  const [crawlData, setCrawlData] = useState<CrawlResult | null>(null);
-  const [checked, setChecked] = useState(false);
 
+  const crawlData = useQuery(api.crawls.getCrawlByUrl, { rootUrl });
+
+  // Redirect to home if no data found (null means query resolved with no results)
   useEffect(() => {
-    const data = getCrawlResult(rootUrl);
-    if (!data) {
+    if (crawlData === null) {
       router.replace("/");
-    } else {
-      setCrawlData(data);
     }
-    setChecked(true);
-  }, [rootUrl, router]);
+  }, [crawlData, router]);
 
-  if (!checked || !crawlData) {
+  // Loading state (undefined = query still loading)
+  if (crawlData === undefined) {
+    return (
+      <div className="flex h-full items-center justify-center">
+        <p className="text-sm text-muted-foreground">Loading...</p>
+      </div>
+    );
+  }
+
+  if (!crawlData) {
     return (
       <div className="flex h-full items-center justify-center">
         <p className="text-sm text-muted-foreground">Loading...</p>

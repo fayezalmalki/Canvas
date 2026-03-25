@@ -6,6 +6,7 @@ import type { CrawlResult, PageAnalysis } from "@/types/canvas";
 interface SiteContextValue {
   crawlResult: CrawlResult | null;
   setCrawlResult: (r: CrawlResult | null) => void;
+  // In-memory cache for current session (Convex handles persistence)
   analysisCache: Map<string, PageAnalysis>;
   setAnalysis: (url: string, analysis: PageAnalysis) => void;
   getAnalysis: (url: string) => PageAnalysis | undefined;
