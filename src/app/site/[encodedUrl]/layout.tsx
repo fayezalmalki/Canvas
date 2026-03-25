@@ -72,7 +72,7 @@ export default function SiteLayout({
   }
 
   return (
-    <SiteProvider initialData={crawlData}>
+    <SiteProvider initialData={crawlData} initialDiscoveredUrls={crawlData.discoveredUrls}>
       <SiteLayoutInner rootUrl={rootUrl}>{children}</SiteLayoutInner>
     </SiteProvider>
   );

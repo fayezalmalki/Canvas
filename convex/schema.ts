@@ -5,6 +5,7 @@ export default defineSchema({
   crawls: defineTable({
     rootUrl: v.string(),
     pagesCount: v.number(),
+    discoveredUrls: v.optional(v.array(v.string())),
     createdAt: v.number(),
   }).index("by_root_url", ["rootUrl"]),
 

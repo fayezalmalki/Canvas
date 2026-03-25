@@ -1,9 +1,12 @@
 "use client";
 
-import { use } from "react";
+import { use, useState } from "react";
 import { useRouter } from "next/navigation";
+import { useMutation } from "convex/react";
+import { api } from "@convex/_generated/api";
 import { useSiteContext } from "@/context/site-context";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
   FileText,
   Link2,
@@ -11,6 +14,8 @@ import {
   AlertTriangle,
   Search,
   Code,
+  Loader2,
+  Plus,
 } from "lucide-react";
 
 export default function SiteOverview({
@@ -20,8 +25,11 @@ export default function SiteOverview({
 }) {
   const { encodedUrl } = use(params);
   const rootUrl = decodeURIComponent(encodedUrl);
-  const { crawlResult, showImages } = useSiteContext();
+  const { crawlResult, showImages, discoveredUrls, setCrawlResult } = useSiteContext();
   const router = useRouter();
+  const storeCrawl = useMutation(api.crawls.storeCrawlResult);
+  const [continueCrawling, setContinueCrawling] = useState(false);
+  const [continueProgress, setContinueProgress] = useState({ current: 0, total: 0 });
 
   if (!crawlResult) return null;
 
@@ -65,6 +73,75 @@ export default function SiteOverview({
     },
     { label: "Structured Data", value: hasStructuredData, icon: Code },
   ];
+
+  async function handleContinueCrawl() {
+    if (discoveredUrls.length === 0) return;
+    setContinueCrawling(true);
+    setContinueProgress({ current: 0, total: Math.min(discoveredUrls.length, 50) });
+
+    try {
+      const res = await fetch("/api/crawl", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          url: rootUrl,
+          maxDepth: 2,
+          maxPages: Math.min(discoveredUrls.length, 50),
+          onlyUrls: discoveredUrls.slice(0, 50),
+        }),
+      });
+
+      if (!res.ok) throw new Error("Crawl failed");
+
+      const reader = res.body?.getReader();
+      if (!reader) throw new Error("No stream");
+
+      const decoder = new TextDecoder();
+      let buffer = "";
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split("\n\n");
+        buffer = lines.pop() || "";
+
+        for (const line of lines) {
+          if (!line.startsWith("data: ")) continue;
+          try {
+            const event = JSON.parse(line.slice(6));
+            if (event.type === "page_crawled") {
+              setContinueProgress({ current: event.index, total: event.total });
+            } else if (event.type === "complete" && event.result) {
+              // Merge new pages with existing and store as new crawl
+              const existingUrls = new Set(crawlResult!.pages.map((p) => p.url));
+              const newPages = event.result.pages.filter(
+                (p: any) => !existingUrls.has(p.url)
+              );
+              const allPages = [...crawlResult!.pages, ...newPages];
+              const remainingDiscovered = event.result.discoveredUrls ?? [];
+
+              await storeCrawl({
+                rootUrl,
+                pages: allPages,
+                discoveredUrls: remainingDiscovered,
+              });
+
+              // Force reload to pick up new data from Convex
+              window.location.reload();
+              return;
+            }
+          } catch {
+            // skip parse errors
+          }
+        }
+      }
+    } catch (err: any) {
+      console.error("Continue crawl failed:", err);
+    } finally {
+      setContinueCrawling(false);
+    }
+  }
 
   function handlePageClick(pageUrl: string) {
     const parsed = new URL(pageUrl);
@@ -122,6 +199,35 @@ export default function SiteOverview({
         Average word count: <span className="font-mono">{avgWordCount}</span>{" "}
         words per page
       </div>
+
+      {/* Continue crawl banner */}
+      {discoveredUrls.length > 0 && (
+        <div className="rounded-lg border border-amber-500/30 bg-amber-500/5 p-4 flex items-center gap-4">
+          <div className="flex-1">
+            <div className="text-sm font-medium">
+              {discoveredUrls.length} more pages discovered
+            </div>
+            <div className="text-xs text-muted-foreground mt-0.5">
+              {pages.length} pages crawled out of {pages.length + discoveredUrls.length} found on the site
+            </div>
+          </div>
+          {continueCrawling ? (
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              Crawling {continueProgress.current}/{continueProgress.total}...
+            </div>
+          ) : (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleContinueCrawl}
+            >
+              <Plus className="h-4 w-4" />
+              Crawl Remaining
+            </Button>
+          )}
+        </div>
+      )}
 
       {/* Page thumbnails */}
       <div>

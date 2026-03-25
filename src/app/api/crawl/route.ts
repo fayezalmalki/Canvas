@@ -1,11 +1,11 @@
-import { crawlSite } from "@/lib/crawler";
+import { crawlSite, crawlSpecificUrls } from "@/lib/crawler";
 
 export const maxDuration = 300;
 
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { url, maxDepth = 2, maxPages = 20 } = body;
+    const { url, maxDepth = 2, maxPages = 20, onlyUrls } = body;
 
     if (!url || typeof url !== "string") {
       return new Response(JSON.stringify({ error: "URL is required" }), {
@@ -35,11 +35,17 @@ export async function POST(request: Request) {
         }
 
         try {
-          await crawlSite(url, {
-            maxDepth: depth,
-            maxPages: pages,
-            onProgress: (event) => send(event),
-          });
+          if (Array.isArray(onlyUrls) && onlyUrls.length > 0) {
+            await crawlSpecificUrls(url, onlyUrls.slice(0, pages), {
+              onProgress: (event) => send(event),
+            });
+          } else {
+            await crawlSite(url, {
+              maxDepth: depth,
+              maxPages: pages,
+              onProgress: (event) => send(event),
+            });
+          }
           controller.close();
         } catch (error: any) {
           send({ type: "error", message: error.message || "Crawl failed" });

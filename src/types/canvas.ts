@@ -47,6 +47,7 @@ export interface CrawlPageResult {
 export interface CrawlResult {
   pages: CrawlPageResult[];
   rootUrl: string;
+  discoveredUrls: string[]; // URLs found but not crawled (over the limit)
 }
 
 export interface SeoIssue {
@@ -92,6 +93,7 @@ export interface CrawlProgressEvent {
   title?: string;
   index?: number;
   total?: number;
+  discovered?: number; // total discovered URLs (crawled + uncrawled)
   result?: CrawlResult;
   message?: string;
 }

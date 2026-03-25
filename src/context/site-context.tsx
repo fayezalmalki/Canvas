@@ -6,6 +6,7 @@ import type { CrawlResult, PageAnalysis } from "@/types/canvas";
 interface SiteContextValue {
   crawlResult: CrawlResult | null;
   setCrawlResult: (r: CrawlResult | null) => void;
+  discoveredUrls: string[];
   // In-memory cache for current session (Convex handles persistence)
   analysisCache: Map<string, PageAnalysis>;
   setAnalysis: (url: string, analysis: PageAnalysis) => void;
@@ -20,9 +21,11 @@ const SiteContext = createContext<SiteContextValue | null>(null);
 
 export function SiteProvider({
   initialData,
+  initialDiscoveredUrls,
   children,
 }: {
   initialData: CrawlResult | null;
+  initialDiscoveredUrls?: string[];
   children: ReactNode;
 }) {
   const [crawlResult, setCrawlResult] = useState<CrawlResult | null>(initialData);
@@ -46,6 +49,7 @@ export function SiteProvider({
     <SiteContext value={{
       crawlResult,
       setCrawlResult,
+      discoveredUrls: initialDiscoveredUrls ?? [],
       analysisCache,
       setAnalysis,
       getAnalysis,

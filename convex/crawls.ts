@@ -60,11 +60,13 @@ export const storeCrawlResult = mutation({
   args: {
     rootUrl: v.string(),
     pages: v.array(pageValidator),
+    discoveredUrls: v.optional(v.array(v.string())),
   },
   handler: async (ctx, args) => {
     const crawlId = await ctx.db.insert("crawls", {
       rootUrl: args.rootUrl,
       pagesCount: args.pages.length,
+      discoveredUrls: args.discoveredUrls ?? [],
       createdAt: Date.now(),
     });
 
@@ -101,7 +103,10 @@ export const getCrawlByUrl = query({
       .collect();
 
     return {
+      _id: crawl._id,
       rootUrl: crawl.rootUrl,
+      discoveredUrls: crawl.discoveredUrls ?? [],
+      createdAt: crawl.createdAt,
       pages: pages.map((p) => ({
         url: p.url,
         title: p.title,
@@ -190,5 +195,33 @@ export const getAnalysis = query({
       .query("analyses")
       .withIndex("by_page_url", (q) => q.eq("pageUrl", args.pageUrl))
       .first();
+  },
+});
+
+export const listRecentCrawls = query({
+  args: {},
+  handler: async (ctx) => {
+    // Get the 20 most recent crawls
+    const crawls = await ctx.db
+      .query("crawls")
+      .order("desc")
+      .take(20);
+
+    // Deduplicate by rootUrl (keep only the latest per site)
+    const seen = new Set<string>();
+    const unique = [];
+    for (const crawl of crawls) {
+      if (!seen.has(crawl.rootUrl)) {
+        seen.add(crawl.rootUrl);
+        unique.push({
+          _id: crawl._id,
+          rootUrl: crawl.rootUrl,
+          pagesCount: crawl.pagesCount,
+          discoveredCount: (crawl.discoveredUrls ?? []).length,
+          createdAt: crawl.createdAt,
+        });
+      }
+    }
+    return unique;
   },
 });

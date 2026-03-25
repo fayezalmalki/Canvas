@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { useMutation } from "convex/react";
+import { useMutation, useQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,6 +15,9 @@ import {
   CheckCircle2,
   ChevronDown,
   ChevronUp,
+  Clock,
+  FileText,
+  ExternalLink,
 } from "lucide-react";
 
 interface CrawledPage {
@@ -31,14 +34,15 @@ export default function Home() {
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [crawling, setCrawling] = useState(false);
   const [crawledPages, setCrawledPages] = useState<CrawledPage[]>([]);
-  const [crawlCount, setCrawlCount] = useState({ current: 0, total: 20 });
+  const [crawlCount, setCrawlCount] = useState({ current: 0, total: 20, discovered: 0 });
   const [error, setError] = useState("");
+  const recentCrawls = useQuery(api.crawls.listRecentCrawls);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError("");
     setCrawledPages([]);
-    setCrawlCount({ current: 0, total: maxPages });
+    setCrawlCount({ current: 0, total: maxPages, discovered: 0 });
 
     let normalizedUrl = url.trim();
     if (!normalizedUrl) return;
@@ -92,11 +96,12 @@ export default function Home() {
                 ...prev,
                 { url: event.url, title: event.title },
               ]);
-              setCrawlCount({ current: event.index, total: event.total });
+              setCrawlCount({ current: event.index, total: event.total, discovered: event.discovered ?? 0 });
             } else if (event.type === "complete" && event.result) {
               await storeCrawl({
                 rootUrl: normalizedUrl,
                 pages: event.result.pages,
+                discoveredUrls: event.result.discoveredUrls ?? [],
               });
               router.push(`/site/${encodeURIComponent(normalizedUrl)}`);
               return;
@@ -231,6 +236,12 @@ export default function Home() {
             </div>
             <Progress value={progressPercent} />
 
+            {crawlCount.discovered > crawlCount.current && (
+              <p className="text-xs text-muted-foreground">
+                Discovered {crawlCount.discovered} URLs total ({crawlCount.discovered - crawlCount.current} remaining)
+              </p>
+            )}
+
             {crawledPages.length > 0 && (
               <div className="max-h-48 overflow-y-auto rounded-lg border border-border bg-card p-2 space-y-1">
                 {crawledPages.map((page, i) => (
@@ -255,7 +266,76 @@ export default function Home() {
             </p>
           </div>
         )}
+
+        {/* Recent Sites */}
+        {!crawling && recentCrawls && recentCrawls.length > 0 && (
+          <div className="space-y-3">
+            <div className="flex items-center gap-2">
+              <Clock className="h-4 w-4 text-muted-foreground" />
+              <h2 className="text-sm font-medium">Recent Sites</h2>
+            </div>
+            <div className="space-y-2">
+              {recentCrawls.map((crawl) => {
+                let domain = "";
+                try {
+                  domain = new URL(crawl.rootUrl).hostname;
+                } catch {
+                  domain = crawl.rootUrl;
+                }
+                const totalDiscovered = crawl.pagesCount + crawl.discoveredCount;
+                const hasRemaining = crawl.discoveredCount > 0;
+
+                return (
+                  <button
+                    key={crawl._id}
+                    onClick={() =>
+                      router.push(
+                        `/site/${encodeURIComponent(crawl.rootUrl)}`
+                      )
+                    }
+                    className="flex w-full items-center gap-3 rounded-lg border border-border bg-card p-3 text-left transition-colors hover:border-primary/50"
+                  >
+                    <Globe className="h-5 w-5 text-muted-foreground shrink-0" />
+                    <div className="flex-1 min-w-0">
+                      <div className="text-sm font-medium font-mono truncate">
+                        {domain}
+                      </div>
+                      <div className="flex items-center gap-3 text-xs text-muted-foreground mt-0.5">
+                        <span className="flex items-center gap-1">
+                          <FileText className="h-3 w-3" />
+                          {crawl.pagesCount} crawled
+                          {hasRemaining && (
+                            <span className="text-amber-500">
+                              / {totalDiscovered} found
+                            </span>
+                          )}
+                        </span>
+                        <span>
+                          {formatTimeAgo(crawl.createdAt)}
+                        </span>
+                      </div>
+                    </div>
+                    <ExternalLink className="h-4 w-4 text-muted-foreground/50 shrink-0" />
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
+}
+
+function formatTimeAgo(timestamp: number): string {
+  const seconds = Math.floor((Date.now() - timestamp) / 1000);
+  if (seconds < 60) return "just now";
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) return `${minutes}m ago`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.floor(hours / 24);
+  if (days < 30) return `${days}d ago`;
+  const months = Math.floor(days / 30);
+  return `${months}mo ago`;
 }
