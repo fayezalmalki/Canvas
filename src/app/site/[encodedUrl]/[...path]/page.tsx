@@ -38,7 +38,8 @@ export default function PageDetail({
 
   const page = useMemo(() => {
     if (!crawlResult) return null;
-    return crawlResult.pages.find((p) => p.url === pageUrl) ?? null;
+    const normalize = (u: string) => u.replace(/\/+$/, "");
+    return crawlResult.pages.find((p) => normalize(p.url) === normalize(pageUrl)) ?? null;
   }, [crawlResult, pageUrl]);
 
   if (!page) {
