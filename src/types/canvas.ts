@@ -67,11 +67,15 @@ export interface ProductData {
   currency?: string;
   availability?: string;
   originalPrice?: string;
+  discountPercent?: number;
   imageUrl?: string;
   brand?: string;
   sku?: string;
   rating?: string;
   reviewCount?: number;
+  description?: string;
+  category?: string;
+  productUrl?: string;
   source: ProductSource;
 }
 

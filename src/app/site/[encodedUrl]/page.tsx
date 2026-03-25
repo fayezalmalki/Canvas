@@ -32,11 +32,13 @@ import {
   Timer,
   Gauge,
   ShoppingCart,
+  ArrowUpDown,
 } from "lucide-react";
 import type { CrawlPageResult } from "@/types/canvas";
 import { scoreSeo } from "@/lib/seo-scorer";
 
 type ViewMode = "list" | "grid";
+type PageSort = "route" | "seo-score" | "response-time" | "word-count";
 
 export default function SiteOverview({
   params,
@@ -51,6 +53,7 @@ export default function SiteOverview({
   const [continueCrawling, setContinueCrawling] = useState(false);
   const [continueProgress, setContinueProgress] = useState({ current: 0, total: 0 });
   const [viewMode, setViewMode] = useState<ViewMode>("list");
+  const [pageSort, setPageSort] = useState<PageSort>("route");
 
   if (!crawlResult) return null;
 
@@ -148,6 +151,24 @@ export default function SiteOverview({
       return a.localeCompare(b);
     });
   }, [pages]);
+
+  // Sorted flat list (for non-route sort modes)
+  const sortedPages = useMemo(() => {
+    if (pageSort === "route") return pages;
+    return [...pages].sort((a, b) => {
+      switch (pageSort) {
+        case "seo-score":
+          return scoreSeo({ url: b.url, title: b.title, seo: b.seo }).score -
+                 scoreSeo({ url: a.url, title: a.title, seo: a.seo }).score;
+        case "response-time":
+          return (a.seo.performance?.responseTimeMs ?? 0) - (b.seo.performance?.responseTimeMs ?? 0);
+        case "word-count":
+          return b.seo.wordCount - a.seo.wordCount;
+        default:
+          return 0;
+      }
+    });
+  }, [pages, pageSort]);
 
   async function handleContinueCrawl() {
     if (discoveredUrls.length === 0) return;
@@ -319,7 +340,20 @@ export default function SiteOverview({
         </TabsList>
 
         <TabsContent value="pages" className="mt-4">
-          <div className="flex justify-end mb-3">
+          <div className="flex items-center justify-between mb-3 gap-3">
+            <div className="flex items-center gap-2">
+              <ArrowUpDown className="h-3.5 w-3.5 text-muted-foreground" />
+              <select
+                value={pageSort}
+                onChange={(e) => setPageSort(e.target.value as PageSort)}
+                className="h-8 rounded-md border border-border bg-card px-2 text-xs text-foreground"
+              >
+                <option value="route">Group by Route</option>
+                <option value="seo-score">SEO Score (High → Low)</option>
+                <option value="response-time">Response Time (Fast → Slow)</option>
+                <option value="word-count">Word Count (Most → Least)</option>
+              </select>
+            </div>
             <div className="flex items-center gap-1 rounded-lg border border-border bg-card p-0.5">
               <button
                 onClick={() => setViewMode("list")}
@@ -337,6 +371,7 @@ export default function SiteOverview({
           </div>
 
           {viewMode === "list" ? (
+            pageSort === "route" ? (
             <div className="space-y-6">
               {grouped.map(([group, groupPages]) => (
                 <div key={group}>
@@ -360,9 +395,21 @@ export default function SiteOverview({
                 </div>
               ))}
             </div>
+            ) : (
+            <div className="rounded-lg border border-border bg-card divide-y divide-border">
+              {sortedPages.map((page) => (
+                <PageListItem
+                  key={page.url}
+                  page={page}
+                  onClick={() => handlePageClick(page.url)}
+                  sortMode={pageSort}
+                />
+              ))}
+            </div>
+            )
           ) : (
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-              {pages.map((page) => (
+              {(pageSort === "route" ? pages : sortedPages).map((page) => (
                 <PageGridItem
                   key={page.url}
                   page={page}
@@ -495,7 +542,7 @@ function I18nSummary({ pages }: { pages: CrawlPageResult[] }) {
   );
 }
 
-function PageListItem({ page, onClick }: { page: CrawlPageResult; onClick: () => void }) {
+function PageListItem({ page, onClick, sortMode }: { page: CrawlPageResult; onClick: () => void; sortMode?: PageSort }) {
   let pathname = "/";
   try { pathname = new URL(page.url).pathname; } catch {}
 
@@ -503,6 +550,7 @@ function PageListItem({ page, onClick }: { page: CrawlPageResult; onClick: () =>
   const hasOg = !!page.seo.meta.ogTitle;
   const hasDesc = !!page.seo.meta.description;
   const lang = page.seo.meta.language;
+  const seoScore = sortMode === "seo-score" ? scoreSeo({ url: page.url, title: page.title, seo: page.seo }).score : null;
 
   return (
     <button
@@ -573,6 +621,24 @@ function PageListItem({ page, onClick }: { page: CrawlPageResult; onClick: () =>
           )}
         </div>
       </div>
+      {/* Sort value indicator */}
+      {sortMode && sortMode !== "route" && (
+        <div className="shrink-0 text-right mt-1 mr-2">
+          {sortMode === "seo-score" && seoScore !== null && (
+            <span className={`text-sm font-bold font-mono ${seoScore >= 80 ? "text-emerald-500" : seoScore >= 50 ? "text-amber-500" : "text-red-500"}`}>
+              {seoScore}
+            </span>
+          )}
+          {sortMode === "response-time" && page.seo.performance && (
+            <span className={`text-sm font-mono ${page.seo.performance.responseTimeMs > 3000 ? "text-red-500" : page.seo.performance.responseTimeMs > 1000 ? "text-amber-500" : "text-emerald-500"}`}>
+              {page.seo.performance.responseTimeMs}ms
+            </span>
+          )}
+          {sortMode === "word-count" && (
+            <span className="text-sm font-mono text-muted-foreground">{wordCount}</span>
+          )}
+        </div>
+      )}
       <ChevronRight className="h-4 w-4 text-muted-foreground/30 shrink-0 mt-1 group-hover:text-foreground transition-colors" />
     </button>
   );

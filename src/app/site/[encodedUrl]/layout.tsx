@@ -9,6 +9,7 @@ import { SiteProvider } from "@/context/site-context";
 import { SiteHeader } from "@/components/site/site-header";
 import { SiteSidebar } from "@/components/site/site-sidebar";
 import { useSiteContext } from "@/context/site-context";
+import { Loader2 } from "lucide-react";
 
 function SiteLayoutInner({
   rootUrl,
@@ -57,16 +58,18 @@ export default function SiteLayout({
   // Loading state (undefined = query still loading)
   if (crawlData === undefined) {
     return (
-      <div className="flex h-full items-center justify-center">
-        <p className="text-sm text-muted-foreground">Loading...</p>
+      <div className="flex h-full items-center justify-center flex-col gap-2">
+        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+        <p className="text-sm text-muted-foreground">Loading site data...</p>
       </div>
     );
   }
 
   if (!crawlData) {
     return (
-      <div className="flex h-full items-center justify-center">
-        <p className="text-sm text-muted-foreground">Loading...</p>
+      <div className="flex h-full items-center justify-center flex-col gap-2">
+        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+        <p className="text-sm text-muted-foreground">Loading site data...</p>
       </div>
     );
   }

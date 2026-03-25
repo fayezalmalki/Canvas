@@ -30,7 +30,53 @@ export function extractProducts(
   const htmlProducts = extractFromHtmlPatterns($);
   allProducts.push(...htmlProducts);
 
-  return deduplicateProducts(allProducts);
+  // Normalize availability and compute discounts for all products
+  const normalized = allProducts.map((p) => {
+    const availability = normalizeAvailability(p.availability);
+    const discountPercent = computeDiscount(p.price, p.originalPrice);
+    return {
+      ...p,
+      availability,
+      discountPercent,
+    };
+  });
+
+  return deduplicateProducts(normalized);
+}
+
+// ---- Availability Normalization ----
+
+function normalizeAvailability(raw?: string): string | undefined {
+  if (!raw) return undefined;
+
+  // Strip schema.org URL prefix
+  let cleaned = raw;
+  if (cleaned.includes("schema.org/")) {
+    cleaned = cleaned.split("/").pop() || cleaned;
+  }
+
+  // Normalize to canonical values
+  const lower = cleaned.toLowerCase().replace(/[_\s-]+/g, "");
+  if (lower === "instock" || lower === "instockitem") return "InStock";
+  if (lower === "outofstock" || lower === "soldout") return "OutOfStock";
+  if (lower === "preorder" || lower === "presale") return "PreOrder";
+  if (lower === "discontinued") return "Discontinued";
+  if (lower === "limitedavailability") return "LimitedAvailability";
+  if (lower === "backorder" || lower === "backordered") return "BackOrder";
+
+  // Return cleaned value if unrecognized
+  return cleaned;
+}
+
+// ---- Discount Computation ----
+
+function computeDiscount(price?: string, originalPrice?: string): number | undefined {
+  if (!price || !originalPrice) return undefined;
+  const current = parseFloat(price);
+  const original = parseFloat(originalPrice);
+  if (isNaN(current) || isNaN(original) || original <= 0 || current >= original) return undefined;
+  const percent = Math.round((1 - current / original) * 100);
+  return percent > 0 && percent <= 99 ? percent : undefined;
 }
 
 // ---- Strategy 1: JSON-LD ----
@@ -38,7 +84,6 @@ export function extractProducts(
 function extractFromJsonLd(entries: StructuredDataEntry[]): ProductData[] {
   const raw = extractProductData(entries);
   return raw.map((p) => {
-    // Also extract brand and sku from the raw entry
     const entry = entries.find((e) => e.type === "Product");
     const data = entry?.data;
     const brand = data?.brand
@@ -54,19 +99,34 @@ function extractFromJsonLd(entries: StructuredDataEntry[]): ProductData[] {
       ? Number((data.aggregateRating as Record<string, unknown>).reviewCount) || undefined
       : undefined;
 
+    // Description
+    const description = data?.description
+      ? String(data.description).slice(0, 200)
+      : undefined;
+
+    // Category
+    const category = data?.category
+      ? String(data.category)
+      : undefined;
+
     // Detect original price (sale)
     let originalPrice: string | undefined;
+    let price = p.price || undefined;
     if (data?.offers) {
       const offers = Array.isArray(data.offers) ? data.offers : [data.offers];
       const offer = offers[0] as Record<string, unknown> | undefined;
       if (offer?.highPrice && offer?.lowPrice && String(offer.highPrice) !== String(offer.lowPrice)) {
         originalPrice = String(offer.highPrice);
       }
+      // Also check individual offer price vs list price
+      if (!originalPrice && offer?.price && offer?.priceValidUntil) {
+        // Has a sale end date — implies sale pricing
+      }
     }
 
     return {
       name: p.name,
-      price: p.price || undefined,
+      price,
       currency: p.currency || undefined,
       availability: p.availability || undefined,
       originalPrice,
@@ -75,6 +135,8 @@ function extractFromJsonLd(entries: StructuredDataEntry[]): ProductData[] {
       sku,
       rating: rating || undefined,
       reviewCount,
+      description: description || undefined,
+      category: category || undefined,
       source: "json-ld" as const,
     };
   });
@@ -92,11 +154,8 @@ function extractFromMicrodata($: cheerio.CheerioAPI): ProductData[] {
 
     const price = getItemprop($c, "price");
     const currency = getItempropAttr($c, "priceCurrency", "content");
-    let availability = getItempropAttr($c, "availability", "href") ||
+    const availability = getItempropAttr($c, "availability", "href") ||
       getItempropAttr($c, "availability", "content");
-    if (availability?.includes("schema.org/")) {
-      availability = availability.split("/").pop() || availability;
-    }
 
     const imageUrl = $c.find('[itemprop="image"]').attr("src") ||
       $c.find('[itemprop="image"]').attr("content") || undefined;
@@ -104,6 +163,8 @@ function extractFromMicrodata($: cheerio.CheerioAPI): ProductData[] {
     const sku = getItempropAttr($c, "sku", "content") || getItemprop($c, "sku");
     const rating = getItempropAttr($c, "ratingValue", "content");
     const reviewCountStr = getItempropAttr($c, "reviewCount", "content");
+    const description = getItemprop($c, "description")?.slice(0, 200) || undefined;
+    const category = getItemprop($c, "category") || undefined;
 
     products.push({
       name,
@@ -115,6 +176,8 @@ function extractFromMicrodata($: cheerio.CheerioAPI): ProductData[] {
       sku: sku || undefined,
       rating: rating || undefined,
       reviewCount: reviewCountStr ? Number(reviewCountStr) || undefined : undefined,
+      description,
+      category,
       source: "microdata",
     });
   });
@@ -148,11 +211,9 @@ function extractFromOgTags($: cheerio.CheerioAPI): ProductData[] {
   if (!name) return [];
 
   const currency = getMeta($, "product:price:currency") || undefined;
-  let availability = getMeta($, "product:availability") || undefined;
-  if (availability?.includes("schema.org/")) {
-    availability = availability.split("/").pop() || availability;
-  }
+  const availability = getMeta($, "product:availability") || undefined;
   const imageUrl = getMeta($, "og:image") || undefined;
+  const description = getMeta($, "og:description")?.slice(0, 200) || undefined;
 
   return [{
     name,
@@ -160,6 +221,7 @@ function extractFromOgTags($: cheerio.CheerioAPI): ProductData[] {
     currency,
     availability,
     imageUrl,
+    description,
     source: "og-tags",
   }];
 }
@@ -202,8 +264,20 @@ const ORIGINAL_PRICE_SELECTORS = [
   ".original-price",
   ".compare-price",
   ".price-compare",
+  ".price-was",
+  ".list-price",
+  "[data-compare-price]",
+  ".product__price--compare",
   "del .amount",
   "s .amount",
+];
+
+const DESCRIPTION_SELECTORS = [
+  ".product-description",
+  ".product__description",
+  "[data-product-description]",
+  ".product-short-description",
+  ".woocommerce-product-details__short-description",
 ];
 
 const CURRENCY_MAP: Record<string, string> = {
@@ -305,6 +379,16 @@ function extractFromHtmlPatterns($: cheerio.CheerioAPI): ProductData[] {
   // Find image
   const imageUrl = $(".product-image img, .product__image img, [data-product-image]").first().attr("src") || undefined;
 
+  // Find description
+  let description: string | undefined;
+  for (const sel of DESCRIPTION_SELECTORS) {
+    const text = $(sel).first().text().trim();
+    if (text && text.length > 10) {
+      description = text.slice(0, 200);
+      break;
+    }
+  }
+
   return [{
     name,
     price,
@@ -312,6 +396,7 @@ function extractFromHtmlPatterns($: cheerio.CheerioAPI): ProductData[] {
     originalPrice,
     availability,
     imageUrl,
+    description,
     source: "html-patterns",
   }];
 }

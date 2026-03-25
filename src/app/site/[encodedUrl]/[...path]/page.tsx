@@ -10,7 +10,7 @@ import { LinkList } from "@/components/page-detail/link-list";
 import { SerpPreview } from "@/components/page-detail/serp-preview";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Sparkles } from "lucide-react";
+import { Sparkles, ChevronLeft, ChevronRight } from "lucide-react";
 import { scoreSeo } from "@/lib/seo-scorer";
 
 export default function PageDetail({
@@ -37,10 +37,16 @@ export default function PageDetail({
     }
   }, [rootUrl, path]);
 
-  const page = useMemo(() => {
-    if (!crawlResult) return null;
+  const { page, prevPage, nextPage } = useMemo(() => {
+    if (!crawlResult) return { page: null, prevPage: null, nextPage: null };
     const normalize = (u: string) => u.replace(/\/+$/, "");
-    return crawlResult.pages.find((p) => normalize(p.url) === normalize(pageUrl)) ?? null;
+    const pages = crawlResult.pages;
+    const idx = pages.findIndex((p) => normalize(p.url) === normalize(pageUrl));
+    return {
+      page: idx >= 0 ? pages[idx] : null,
+      prevPage: idx > 0 ? pages[idx - 1] : null,
+      nextPage: idx >= 0 && idx < pages.length - 1 ? pages[idx + 1] : null,
+    };
   }, [crawlResult, pageUrl]);
 
   if (!page) {
@@ -59,6 +65,17 @@ export default function PageDetail({
       : seoScore.score >= 50
         ? "text-amber-500"
         : "text-red-500";
+
+  function navigateToPage(pageUrl: string) {
+    const parsed = new URL(pageUrl);
+    const pagePath = parsed.pathname === "/" ? "" : parsed.pathname;
+    const encodedRoot = encodeURIComponent(rootUrl);
+    if (pagePath) {
+      router.push(`/site/${encodedRoot}/${pagePath.slice(1)}`);
+    } else {
+      router.push(`/site/${encodedRoot}/_root`);
+    }
+  }
 
   return (
     <div className="p-6 space-y-6 max-w-5xl">
@@ -105,6 +122,46 @@ export default function PageDetail({
           <LinkList links={page.outgoingLinks} />
         </TabsContent>
       </Tabs>
+
+      {/* Prev/Next navigation */}
+      {(prevPage || nextPage) && (
+        <div className="flex items-stretch gap-3 pt-2 border-t border-border">
+          {prevPage ? (
+            <button
+              onClick={() => navigateToPage(prevPage.url)}
+              className="flex-1 flex items-center gap-2 rounded-lg border border-border bg-card p-3 text-left transition-colors hover:border-primary/50 min-w-0"
+            >
+              <ChevronLeft className="h-4 w-4 shrink-0 text-muted-foreground" />
+              <div className="min-w-0">
+                <div className="text-[11px] text-muted-foreground">Previous</div>
+                <div className="text-sm truncate">{prevPage.title || "Untitled"}</div>
+                <div className="text-[11px] text-muted-foreground font-mono truncate">
+                  {(() => { try { return new URL(prevPage.url).pathname; } catch { return prevPage.url; } })()}
+                </div>
+              </div>
+            </button>
+          ) : (
+            <div className="flex-1" />
+          )}
+          {nextPage ? (
+            <button
+              onClick={() => navigateToPage(nextPage.url)}
+              className="flex-1 flex items-center gap-2 rounded-lg border border-border bg-card p-3 text-right transition-colors hover:border-primary/50 min-w-0 justify-end"
+            >
+              <div className="min-w-0">
+                <div className="text-[11px] text-muted-foreground">Next</div>
+                <div className="text-sm truncate">{nextPage.title || "Untitled"}</div>
+                <div className="text-[11px] text-muted-foreground font-mono truncate">
+                  {(() => { try { return new URL(nextPage.url).pathname; } catch { return nextPage.url; } })()}
+                </div>
+              </div>
+              <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" />
+            </button>
+          ) : (
+            <div className="flex-1" />
+          )}
+        </div>
+      )}
     </div>
   );
 }

@@ -98,7 +98,7 @@ function TreeNodeItem({
           <FileText className="h-3 w-3 shrink-0" />
         )}
 
-        <span className="truncate font-mono">{node.segment}</span>
+        <span className={`truncate font-mono ${isActive ? "font-semibold" : ""}`}>{node.segment}</span>
 
         {node.title && (
           <span className="ml-auto truncate text-muted-foreground pl-2 max-w-[120px]">

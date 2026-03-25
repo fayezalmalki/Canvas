@@ -258,67 +258,88 @@ export function SeoOverview({ seo, products }: { seo: PageSeoData; products?: Pr
             Products ({products.length})
           </h3>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            {products.map((product, i) => (
-              <div key={i} className="rounded-lg border border-border bg-card p-3 space-y-2">
-                <div className="flex items-start gap-3">
-                  {product.imageUrl && (
-                    <div className="w-12 h-12 rounded bg-muted overflow-hidden shrink-0">
-                      <img
-                        src={product.imageUrl}
-                        alt={product.name}
-                        className="w-full h-full object-contain"
-                        onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
-                      />
-                    </div>
-                  )}
-                  <div className="min-w-0 flex-1">
-                    <div className="text-sm font-medium line-clamp-2">{product.name}</div>
-                    {product.price && (
-                      <div className="flex items-center gap-2 mt-0.5">
-                        <span className="text-sm font-semibold font-mono">
-                          {product.currency && <span className="text-xs text-muted-foreground mr-0.5">{product.currency}</span>}
-                          {product.price}
-                        </span>
-                        {product.originalPrice && product.originalPrice !== product.price && (
-                          <span className="text-xs text-muted-foreground line-through font-mono">
-                            {product.originalPrice}
-                          </span>
-                        )}
+            {products.map((product, i) => {
+              const hasDiscount = product.discountPercent && product.discountPercent > 0;
+              return (
+                <div key={i} className="rounded-lg border border-border bg-card p-3 space-y-2">
+                  <div className="flex items-start gap-3">
+                    {product.imageUrl && (
+                      <div className="w-12 h-12 rounded bg-muted overflow-hidden shrink-0 relative">
+                        <img
+                          src={product.imageUrl}
+                          alt={product.name}
+                          className="w-full h-full object-contain"
+                          onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
+                        />
                       </div>
                     )}
+                    <div className="min-w-0 flex-1">
+                      <div className="text-sm font-medium line-clamp-2">{product.name}</div>
+                      {product.description && (
+                        <p className="text-[11px] text-muted-foreground line-clamp-1 mt-0.5">{product.description}</p>
+                      )}
+                      {product.price && (
+                        <div className="flex items-center gap-2 mt-0.5">
+                          <span className={`text-sm font-semibold font-mono ${hasDiscount ? "text-red-500" : ""}`}>
+                            {product.currency && <span className="text-xs text-muted-foreground mr-0.5">{product.currency}</span>}
+                            {product.price}
+                          </span>
+                          {product.originalPrice && product.originalPrice !== product.price && (
+                            <span className="text-xs text-muted-foreground line-through font-mono">
+                              {product.originalPrice}
+                            </span>
+                          )}
+                          {hasDiscount && (
+                            <Badge variant="outline" className="text-[10px] px-1 py-0 text-red-500 border-red-500/30 font-bold">
+                              -{product.discountPercent}%
+                            </Badge>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                  <div className="flex flex-wrap gap-1.5">
+                    {product.availability && (
+                      <Badge
+                        variant="outline"
+                        className={`text-[10px] px-1.5 py-0 ${
+                          product.availability === "InStock" || product.availability === "LimitedAvailability"
+                            ? "text-emerald-500 border-emerald-500/30"
+                            : product.availability === "OutOfStock" || product.availability === "Discontinued"
+                              ? "text-red-500 border-red-500/30"
+                              : product.availability === "PreOrder" || product.availability === "BackOrder"
+                                ? "text-blue-500 border-blue-500/30"
+                                : ""
+                        }`}
+                      >
+                        {product.availability === "InStock" ? "In Stock"
+                          : product.availability === "OutOfStock" ? "Out of Stock"
+                          : product.availability === "LimitedAvailability" ? "Limited"
+                          : product.availability}
+                      </Badge>
+                    )}
+                    {product.category && (
+                      <Badge variant="outline" className="text-[10px] px-1.5 py-0">
+                        {product.category}
+                      </Badge>
+                    )}
+                    {product.brand && (
+                      <Badge variant="outline" className="text-[10px] px-1.5 py-0">
+                        <Tag className="h-2.5 w-2.5 mr-0.5" />{product.brand}
+                      </Badge>
+                    )}
+                    {product.rating && (
+                      <Badge variant="outline" className="text-[10px] px-1.5 py-0 text-amber-500 border-amber-500/30">
+                        <Star className="h-2.5 w-2.5 mr-0.5 fill-amber-500" />{product.rating}
+                      </Badge>
+                    )}
+                    <Badge variant="outline" className="text-[10px] px-1.5 py-0 font-mono">
+                      {product.source}
+                    </Badge>
                   </div>
                 </div>
-                <div className="flex flex-wrap gap-1.5">
-                  {product.availability && (
-                    <Badge
-                      variant="outline"
-                      className={`text-[10px] px-1.5 py-0 ${
-                        product.availability === "InStock"
-                          ? "text-emerald-500 border-emerald-500/30"
-                          : product.availability === "OutOfStock"
-                            ? "text-red-500 border-red-500/30"
-                            : ""
-                      }`}
-                    >
-                      {product.availability === "InStock" ? "In Stock" : product.availability === "OutOfStock" ? "Out of Stock" : product.availability}
-                    </Badge>
-                  )}
-                  {product.brand && (
-                    <Badge variant="outline" className="text-[10px] px-1.5 py-0">
-                      <Tag className="h-2.5 w-2.5 mr-0.5" />{product.brand}
-                    </Badge>
-                  )}
-                  {product.rating && (
-                    <Badge variant="outline" className="text-[10px] px-1.5 py-0 text-amber-500 border-amber-500/30">
-                      <Star className="h-2.5 w-2.5 mr-0.5 fill-amber-500" />{product.rating}
-                    </Badge>
-                  )}
-                  <Badge variant="outline" className="text-[10px] px-1.5 py-0 font-mono">
-                    {product.source}
-                  </Badge>
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       )}
