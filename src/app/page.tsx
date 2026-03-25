@@ -102,6 +102,8 @@ export default function Home() {
                 rootUrl: normalizedUrl,
                 pages: event.result.pages,
                 discoveredUrls: event.result.discoveredUrls ?? [],
+                brokenLinks: event.result.brokenLinks ?? [],
+                redirectChains: event.result.redirectChains ?? [],
               });
               router.push(`/site/${encodeURIComponent(normalizedUrl)}`);
               return;

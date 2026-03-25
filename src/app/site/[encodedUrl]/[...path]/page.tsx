@@ -7,6 +7,7 @@ import { PageHeader } from "@/components/page-detail/page-header";
 import { ScreenshotPreview } from "@/components/page-detail/screenshot-preview";
 import { SeoOverview } from "@/components/page-detail/seo-overview";
 import { LinkList } from "@/components/page-detail/link-list";
+import { SerpPreview } from "@/components/page-detail/serp-preview";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Sparkles } from "lucide-react";
@@ -65,6 +66,9 @@ export default function PageDetail({
       {showImages && (
         <ScreenshotPreview screenshot={page.screenshot} title={page.title} />
       )}
+
+      {/* SERP Preview */}
+      <SerpPreview url={page.url} title={page.title} meta={page.seo.meta} />
 
       {/* Quick SEO score + analysis link */}
       <div className="flex items-center gap-4 rounded-lg border border-border bg-card p-4">

@@ -119,6 +119,93 @@ export function scoreSeo(page: ScorerInput): SeoScoreResult {
     checksPassed.push("Language attribute set");
   }
 
+  // --- URL Length ---
+  try {
+    const pathname = new URL(page.url).pathname;
+    if (pathname.length > 75) {
+      deduct(3, "warning", "URL", "URL too long", `URL path is ${pathname.length} characters (recommended: under 75)`);
+    } else {
+      checksPassed.push("URL length OK");
+    }
+    if (pathname.includes("_")) {
+      deduct(2, "warning", "URL", "URL contains underscores", "Use hyphens instead of underscores for better SEO");
+    }
+  } catch {
+    // skip URL checks for invalid URLs
+  }
+
+  // --- OG Image ---
+  if (!seo.meta.ogImage) {
+    deduct(3, "warning", "Social", "No OG image", "Missing og:image — social shares will lack a preview image");
+  } else {
+    checksPassed.push("OG image set");
+  }
+
+  // --- Orphan page (no internal links) ---
+  if (seo.internalLinkCount === 0) {
+    deduct(5, "warning", "Content", "No internal links", "Page has no internal links — potential orphan page");
+  }
+
+  // --- Heading hierarchy gaps ---
+  if (seo.headings.length > 1) {
+    const levels = seo.headings.map((h) => parseInt(h.tag.slice(1)));
+    for (let i = 1; i < levels.length; i++) {
+      if (levels[i] - levels[i - 1] > 1) {
+        deduct(3, "warning", "Content", "Heading hierarchy gap", `Skipped heading level: H${levels[i - 1]} → H${levels[i]}`);
+        break;
+      }
+    }
+  }
+
+  // --- Title matches H1 exactly ---
+  if (title && h1Count === 1) {
+    const h1Text = seo.headings.find((h) => h.tag === "h1")?.text;
+    if (h1Text && h1Text.trim().toLowerCase() === title.trim().toLowerCase()) {
+      deduct(0, "info", "Content", "Title matches H1", "Title and H1 are identical — consider differentiating for better SEO");
+    }
+  }
+
+  // --- Performance checks ---
+  if (seo.performance) {
+    if (seo.performance.htmlSizeBytes > 200 * 1024) {
+      const sizeKb = Math.round(seo.performance.htmlSizeBytes / 1024);
+      deduct(5, "warning", "Performance", "Large HTML size", `HTML is ${sizeKb}KB (recommended: under 200KB)`);
+    } else {
+      checksPassed.push("HTML size OK");
+    }
+
+    if (seo.performance.responseTimeMs > 3000) {
+      deduct(5, "warning", "Performance", "Slow response", `Response took ${Math.round(seo.performance.responseTimeMs / 1000)}s (recommended: under 3s)`);
+    } else {
+      checksPassed.push("Response time OK");
+    }
+
+    if (!seo.performance.hasCompression) {
+      deduct(3, "warning", "Performance", "No compression", "Response lacks content-encoding (gzip/brotli)");
+    }
+
+    if (!seo.performance.cacheControl) {
+      deduct(2, "info", "Performance", "No cache-control", "No Cache-Control header set");
+    }
+  }
+
+  // --- i18n / RTL checks ---
+  if (seo.i18n) {
+    if (seo.i18n.hasArabicContent && seo.i18n.dir !== "rtl") {
+      deduct(8, "error", "i18n", "Arabic content without RTL", "Page has Arabic content but lacks dir=\"rtl\" attribute");
+    }
+
+    if (seo.i18n.hasArabicContent && seo.meta.language && !seo.meta.language.startsWith("ar")) {
+      deduct(5, "warning", "i18n", "Language mismatch", `Arabic content detected but lang="${seo.meta.language}"`);
+    }
+
+    if (seo.i18n.hreflangLinks.length > 0) {
+      checksPassed.push(`Hreflang tags present (${seo.i18n.hreflangLinks.length} alternates)`);
+    } else if (seo.i18n.hasArabicContent) {
+      deduct(3, "warning", "i18n", "Missing hreflang", "Arabic content without hreflang alternate links");
+    }
+  }
+
   // Clamp score
   score = Math.max(0, Math.min(100, score));
 

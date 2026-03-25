@@ -23,6 +23,27 @@ export interface HeadingEntry {
   text: string;
 }
 
+export interface PagePerformance {
+  responseTimeMs: number;
+  htmlSizeBytes: number;
+  hasCompression: boolean;
+  cacheControl: string | null;
+  serverHeader: string | null;
+}
+
+export interface I18nData {
+  dir: string | null; // "rtl" | "ltr" | null
+  hreflangLinks: { lang: string; url: string }[];
+  hasArabicContent: boolean;
+  arabicRatio: number; // 0-1
+}
+
+export interface StructuredDataEntry {
+  type: string; // e.g. "Product", "Article", "Organization"
+  data: Record<string, unknown>;
+  issues: string[];
+}
+
 export interface PageSeoData {
   meta: PageMetadata;
   headings: HeadingEntry[];
@@ -32,7 +53,10 @@ export interface PageSeoData {
   internalLinkCount: number;
   externalLinkCount: number;
   hasStructuredData: boolean;
+  structuredData?: StructuredDataEntry[];
   statusCode: number;
+  performance?: PagePerformance;
+  i18n?: I18nData;
 }
 
 export interface CrawlPageResult {
@@ -44,10 +68,44 @@ export interface CrawlPageResult {
   bodyText: string; // first ~3000 chars for LLM analysis
 }
 
+export interface BrokenLink {
+  url: string;
+  statusCode: number;
+  referringPages: string[];
+}
+
+export interface RedirectChain {
+  from: string;
+  to: string;
+  hops: number;
+  statusCodes: number[];
+}
+
+export interface RobotsSitemapResult {
+  robotsTxt: {
+    found: boolean;
+    sitemapUrls: string[];
+    blockedPaths: string[];
+    issues: string[];
+  };
+  sitemap: {
+    found: boolean;
+    urls: { loc: string; lastmod?: string }[];
+    issues: string[];
+  };
+  coverage: {
+    inSitemapNotCrawled: string[];
+    crawledNotInSitemap: string[];
+  };
+}
+
 export interface CrawlResult {
   pages: CrawlPageResult[];
   rootUrl: string;
-  discoveredUrls: string[]; // URLs found but not crawled (over the limit)
+  discoveredUrls: string[];
+  brokenLinks?: BrokenLink[];
+  redirectChains?: RedirectChain[];
+  robotsSitemap?: RobotsSitemapResult;
 }
 
 export interface SeoIssue {

@@ -44,7 +44,28 @@ const seoValidator = v.object({
   internalLinkCount: v.number(),
   externalLinkCount: v.number(),
   hasStructuredData: v.boolean(),
+  structuredData: v.optional(v.array(v.object({
+    type: v.string(),
+    data: v.any(),
+    issues: v.array(v.string()),
+  }))),
   statusCode: v.number(),
+  performance: v.optional(v.object({
+    responseTimeMs: v.number(),
+    htmlSizeBytes: v.number(),
+    hasCompression: v.boolean(),
+    cacheControl: v.union(v.string(), v.null()),
+    serverHeader: v.union(v.string(), v.null()),
+  })),
+  i18n: v.optional(v.object({
+    dir: v.union(v.string(), v.null()),
+    hreflangLinks: v.array(v.object({
+      lang: v.string(),
+      url: v.string(),
+    })),
+    hasArabicContent: v.boolean(),
+    arabicRatio: v.number(),
+  })),
 });
 
 const pageValidator = v.object({
@@ -61,12 +82,25 @@ export const storeCrawlResult = mutation({
     rootUrl: v.string(),
     pages: v.array(pageValidator),
     discoveredUrls: v.optional(v.array(v.string())),
+    brokenLinks: v.optional(v.array(v.object({
+      url: v.string(),
+      statusCode: v.number(),
+      referringPages: v.array(v.string()),
+    }))),
+    redirectChains: v.optional(v.array(v.object({
+      from: v.string(),
+      to: v.string(),
+      hops: v.number(),
+      statusCodes: v.array(v.number()),
+    }))),
   },
   handler: async (ctx, args) => {
     const crawlId = await ctx.db.insert("crawls", {
       rootUrl: args.rootUrl,
       pagesCount: args.pages.length,
       discoveredUrls: args.discoveredUrls ?? [],
+      brokenLinks: args.brokenLinks,
+      redirectChains: args.redirectChains,
       createdAt: Date.now(),
     });
 
@@ -106,6 +140,8 @@ export const getCrawlByUrl = query({
       _id: crawl._id,
       rootUrl: crawl.rootUrl,
       discoveredUrls: crawl.discoveredUrls ?? [],
+      brokenLinks: crawl.brokenLinks ?? [],
+      redirectChains: crawl.redirectChains ?? [],
       createdAt: crawl.createdAt,
       pages: pages.map((p) => ({
         url: p.url,
