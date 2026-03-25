@@ -93,6 +93,24 @@ export default defineSchema({
         arabicRatio: v.number(),
       })),
     }),
+    products: v.optional(v.array(v.object({
+      name: v.string(),
+      price: v.optional(v.string()),
+      currency: v.optional(v.string()),
+      availability: v.optional(v.string()),
+      originalPrice: v.optional(v.string()),
+      imageUrl: v.optional(v.string()),
+      brand: v.optional(v.string()),
+      sku: v.optional(v.string()),
+      rating: v.optional(v.string()),
+      reviewCount: v.optional(v.number()),
+      source: v.union(
+        v.literal("json-ld"),
+        v.literal("microdata"),
+        v.literal("html-patterns"),
+        v.literal("og-tags")
+      ),
+    }))),
   }).index("by_crawl_id", ["crawlId"]),
 
   analyses: defineTable({

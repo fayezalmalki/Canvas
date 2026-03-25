@@ -100,7 +100,10 @@ export default function Home() {
             } else if (event.type === "complete" && event.result) {
               await storeCrawl({
                 rootUrl: normalizedUrl,
-                pages: event.result.pages,
+                pages: event.result.pages.map((p: any) => ({
+                  ...p,
+                  products: p.products ?? undefined,
+                })),
                 discoveredUrls: event.result.discoveredUrls ?? [],
                 brokenLinks: event.result.brokenLinks ?? [],
                 redirectChains: event.result.redirectChains ?? [],

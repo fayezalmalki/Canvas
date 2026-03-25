@@ -68,6 +68,25 @@ const seoValidator = v.object({
   })),
 });
 
+const productValidator = v.object({
+  name: v.string(),
+  price: v.optional(v.string()),
+  currency: v.optional(v.string()),
+  availability: v.optional(v.string()),
+  originalPrice: v.optional(v.string()),
+  imageUrl: v.optional(v.string()),
+  brand: v.optional(v.string()),
+  sku: v.optional(v.string()),
+  rating: v.optional(v.string()),
+  reviewCount: v.optional(v.number()),
+  source: v.union(
+    v.literal("json-ld"),
+    v.literal("microdata"),
+    v.literal("html-patterns"),
+    v.literal("og-tags")
+  ),
+});
+
 const pageValidator = v.object({
   url: v.string(),
   title: v.string(),
@@ -75,6 +94,7 @@ const pageValidator = v.object({
   bodyText: v.string(),
   outgoingLinks: v.array(outgoingLinkValidator),
   seo: seoValidator,
+  products: v.optional(v.array(productValidator)),
 });
 
 export const storeCrawlResult = mutation({
@@ -113,6 +133,7 @@ export const storeCrawlResult = mutation({
         bodyText: page.bodyText,
         outgoingLinks: page.outgoingLinks,
         seo: page.seo,
+        products: page.products,
       });
     }
 
@@ -150,6 +171,7 @@ export const getCrawlByUrl = query({
         bodyText: p.bodyText,
         outgoingLinks: p.outgoingLinks,
         seo: p.seo,
+        products: p.products,
       })),
     };
   },

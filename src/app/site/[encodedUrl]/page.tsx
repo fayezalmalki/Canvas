@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { BrokenLinksPanel } from "@/components/site/broken-links-panel";
 import { ContentIssuesPanel } from "@/components/site/content-issues-panel";
+import { ProductsPanel } from "@/components/site/products-panel";
 import {
   FileText,
   Link2,
@@ -30,6 +31,7 @@ import {
   Languages,
   Timer,
   Gauge,
+  ShoppingCart,
 } from "lucide-react";
 import type { CrawlPageResult } from "@/types/canvas";
 import { scoreSeo } from "@/lib/seo-scorer";
@@ -83,6 +85,13 @@ export default function SiteOverview({
   // Broken links count
   const brokenLinksCount = crawlResult.brokenLinks?.length ?? 0;
   const redirectChainsCount = crawlResult.redirectChains?.length ?? 0;
+
+  // Products aggregation
+  const allProducts = useMemo(() =>
+    pages.flatMap((p) =>
+      (p.products ?? []).map((prod) => ({ ...prod, pageUrl: p.url }))
+    ), [pages]);
+  const totalProducts = allProducts.length;
 
   const stats = [
     { label: "Pages", value: pages.length, icon: FileText },
@@ -298,6 +307,15 @@ export default function SiteOverview({
               i18n
             </TabsTrigger>
           )}
+          {totalProducts > 0 && (
+            <TabsTrigger value="products">
+              <ShoppingCart className="h-3.5 w-3.5" />
+              Products
+              <Badge variant="outline" className="ml-1.5 text-[10px] px-1 py-0">
+                {totalProducts}
+              </Badge>
+            </TabsTrigger>
+          )}
         </TabsList>
 
         <TabsContent value="pages" className="mt-4">
@@ -372,6 +390,12 @@ export default function SiteOverview({
         {pagesWithArabic > 0 && (
           <TabsContent value="i18n" className="mt-4">
             <I18nSummary pages={pages} />
+          </TabsContent>
+        )}
+
+        {totalProducts > 0 && (
+          <TabsContent value="products" className="mt-4">
+            <ProductsPanel products={allProducts} />
           </TabsContent>
         )}
       </Tabs>

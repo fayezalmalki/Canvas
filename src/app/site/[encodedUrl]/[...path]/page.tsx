@@ -98,7 +98,7 @@ export default function PageDetail({
         </TabsList>
 
         <TabsContent value="overview" className="mt-4">
-          <SeoOverview seo={page.seo} />
+          <SeoOverview seo={page.seo} products={page.products} />
         </TabsContent>
 
         <TabsContent value="links" className="mt-4">

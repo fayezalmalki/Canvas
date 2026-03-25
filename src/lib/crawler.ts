@@ -11,6 +11,7 @@ import type {
   CrawlProgressEvent,
 } from "@/types/canvas";
 import { validateStructuredData } from "./schema-validator";
+import { extractProducts } from "./ecommerce-extractor";
 
 interface CrawlOptions {
   maxDepth: number;
@@ -180,6 +181,9 @@ export async function crawlSite(
         ? validateStructuredData(jsonLdScripts)
         : undefined;
 
+      // Extract products BEFORE removing scripts (microdata/HTML patterns need full DOM)
+      const products = extractProducts($, structuredData);
+
       // Body text
       $("script, style, noscript").remove();
       const bodyText = $("body").text().replace(/\s+/g, " ").trim();
@@ -207,6 +211,7 @@ export async function crawlSite(
         outgoingLinks: links,
         seo,
         bodyText: bodyText.slice(0, 3000),
+        products: products.length > 0 ? products : undefined,
       });
 
       onProgress?.({
@@ -392,6 +397,9 @@ export async function crawlSpecificUrls(
         ? validateStructuredData(jsonLdScripts)
         : undefined;
 
+      // Extract products BEFORE removing scripts
+      const products = extractProducts($, structuredData);
+
       $("script, style, noscript").remove();
       const bodyText = $("body").text().replace(/\s+/g, " ").trim();
       const wordCount = bodyText.split(/\s+/).filter(Boolean).length;
@@ -418,6 +426,7 @@ export async function crawlSpecificUrls(
         outgoingLinks: links,
         seo,
         bodyText: bodyText.slice(0, 3000),
+        products: products.length > 0 ? products : undefined,
       });
 
       onProgress?.({

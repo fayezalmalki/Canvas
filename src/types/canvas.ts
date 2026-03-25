@@ -59,6 +59,22 @@ export interface PageSeoData {
   i18n?: I18nData;
 }
 
+export type ProductSource = "json-ld" | "microdata" | "html-patterns" | "og-tags";
+
+export interface ProductData {
+  name: string;
+  price?: string;
+  currency?: string;
+  availability?: string;
+  originalPrice?: string;
+  imageUrl?: string;
+  brand?: string;
+  sku?: string;
+  rating?: string;
+  reviewCount?: number;
+  source: ProductSource;
+}
+
 export interface CrawlPageResult {
   url: string;
   title: string;
@@ -66,6 +82,7 @@ export interface CrawlPageResult {
   outgoingLinks: OutgoingLink[];
   seo: PageSeoData;
   bodyText: string; // first ~3000 chars for LLM analysis
+  products?: ProductData[];
 }
 
 export interface BrokenLink {

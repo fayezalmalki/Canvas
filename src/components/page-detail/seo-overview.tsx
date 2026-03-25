@@ -1,6 +1,6 @@
 "use client";
 
-import type { PageSeoData } from "@/types/canvas";
+import type { PageSeoData, ProductData } from "@/types/canvas";
 import { Badge } from "@/components/ui/badge";
 import {
   CheckCircle2,
@@ -10,6 +10,9 @@ import {
   Image,
   Link2,
   Code,
+  ShoppingCart,
+  Star,
+  Tag,
 } from "lucide-react";
 
 function MetaRow({
@@ -38,7 +41,7 @@ function MetaRow({
   );
 }
 
-export function SeoOverview({ seo }: { seo: PageSeoData }) {
+export function SeoOverview({ seo, products }: { seo: PageSeoData; products?: ProductData[] }) {
   const h1Count = seo.headings.filter((h) => h.tag === "h1").length;
 
   return (
@@ -241,6 +244,79 @@ export function SeoOverview({ seo }: { seo: PageSeoData }) {
                     {issue}
                   </div>
                 ))}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Products */}
+      {products && products.length > 0 && (
+        <div>
+          <h3 className="text-sm font-medium mb-2 flex items-center gap-2">
+            <ShoppingCart className="h-4 w-4" />
+            Products ({products.length})
+          </h3>
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            {products.map((product, i) => (
+              <div key={i} className="rounded-lg border border-border bg-card p-3 space-y-2">
+                <div className="flex items-start gap-3">
+                  {product.imageUrl && (
+                    <div className="w-12 h-12 rounded bg-muted overflow-hidden shrink-0">
+                      <img
+                        src={product.imageUrl}
+                        alt={product.name}
+                        className="w-full h-full object-contain"
+                        onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
+                      />
+                    </div>
+                  )}
+                  <div className="min-w-0 flex-1">
+                    <div className="text-sm font-medium line-clamp-2">{product.name}</div>
+                    {product.price && (
+                      <div className="flex items-center gap-2 mt-0.5">
+                        <span className="text-sm font-semibold font-mono">
+                          {product.currency && <span className="text-xs text-muted-foreground mr-0.5">{product.currency}</span>}
+                          {product.price}
+                        </span>
+                        {product.originalPrice && product.originalPrice !== product.price && (
+                          <span className="text-xs text-muted-foreground line-through font-mono">
+                            {product.originalPrice}
+                          </span>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </div>
+                <div className="flex flex-wrap gap-1.5">
+                  {product.availability && (
+                    <Badge
+                      variant="outline"
+                      className={`text-[10px] px-1.5 py-0 ${
+                        product.availability === "InStock"
+                          ? "text-emerald-500 border-emerald-500/30"
+                          : product.availability === "OutOfStock"
+                            ? "text-red-500 border-red-500/30"
+                            : ""
+                      }`}
+                    >
+                      {product.availability === "InStock" ? "In Stock" : product.availability === "OutOfStock" ? "Out of Stock" : product.availability}
+                    </Badge>
+                  )}
+                  {product.brand && (
+                    <Badge variant="outline" className="text-[10px] px-1.5 py-0">
+                      <Tag className="h-2.5 w-2.5 mr-0.5" />{product.brand}
+                    </Badge>
+                  )}
+                  {product.rating && (
+                    <Badge variant="outline" className="text-[10px] px-1.5 py-0 text-amber-500 border-amber-500/30">
+                      <Star className="h-2.5 w-2.5 mr-0.5 fill-amber-500" />{product.rating}
+                    </Badge>
+                  )}
+                  <Badge variant="outline" className="text-[10px] px-1.5 py-0 font-mono">
+                    {product.source}
+                  </Badge>
+                </div>
               </div>
             ))}
           </div>
