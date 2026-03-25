@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { generateText, Output } from "ai";
 import { z } from "zod";
-import { getModel, getProviderName } from "@/lib/ai-provider";
+import { getStructuredModel, getProviderName } from "@/lib/ai-provider";
 import { scoreSeo, formatSeoScoreForPrompt } from "@/lib/seo-scorer";
 
 export const maxDuration = 60;
@@ -78,7 +78,7 @@ Based on the deterministic SEO analysis above and the page content, provide:
 2. Feature detection: detected features (Forms, Auth, Search, Blog, etc.) and technologies (React, WordPress, Tailwind, etc.)
 3. Strategic recommendations with priority (high/medium/low) — focus on actionable improvements`;
 
-    const model = getModel();
+    const model = getStructuredModel();
     const result = await generateText({
       model,
       output: Output.object({ schema: LlmAnalysisSchema }),

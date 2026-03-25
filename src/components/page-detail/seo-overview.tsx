@@ -75,6 +75,25 @@ export function SeoOverview({ seo }: { seo: PageSeoData }) {
           <MetaRow label="OG Title" value={seo.meta.ogTitle} />
           <MetaRow label="OG Description" value={seo.meta.ogDescription} />
           <MetaRow label="OG Image" value={seo.meta.ogImage} />
+          {seo.meta.ogImage && (
+            <div className="py-2 border-b border-border last:border-0">
+              <div className="w-32 shrink-0 text-xs text-muted-foreground mb-2">OG Image Preview</div>
+              <div className="rounded-md border border-border overflow-hidden bg-muted max-w-sm">
+                <img
+                  src={seo.meta.ogImage}
+                  alt="Open Graph preview"
+                  className="w-full h-auto object-cover"
+                  onError={(e) => {
+                    (e.target as HTMLImageElement).style.display = "none";
+                    (e.target as HTMLImageElement).nextElementSibling?.classList.remove("hidden");
+                  }}
+                />
+                <div className="hidden flex items-center justify-center py-4 text-xs text-muted-foreground">
+                  Failed to load OG image
+                </div>
+              </div>
+            </div>
+          )}
           <MetaRow label="Language" value={seo.meta.language} />
         </div>
       </div>

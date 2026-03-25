@@ -1,14 +1,56 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import type { CrawlPageResult } from "@/types/canvas";
 import { Badge } from "@/components/ui/badge";
-import { ExternalLink } from "lucide-react";
+import { ExternalLink, ChevronRight, Home } from "lucide-react";
 
-export function PageHeader({ page }: { page: CrawlPageResult }) {
+export function PageHeader({ page, rootUrl }: { page: CrawlPageResult; rootUrl: string }) {
+  const router = useRouter();
   const pathname = new URL(page.url).pathname;
+  const encodedRoot = encodeURIComponent(rootUrl);
+
+  // Build breadcrumb segments from pathname
+  const segments = pathname.split("/").filter(Boolean);
 
   return (
-    <div className="space-y-1">
+    <div className="space-y-2">
+      {/* Breadcrumb */}
+      <nav className="flex items-center gap-1 text-xs text-muted-foreground">
+        <button
+          onClick={() => router.push(`/site/${encodedRoot}`)}
+          className="flex items-center gap-1 hover:text-foreground transition-colors"
+        >
+          <Home className="h-3 w-3" />
+          <span>Overview</span>
+        </button>
+        {segments.map((seg, i) => {
+          const isLast = i === segments.length - 1;
+          const partialPath = segments.slice(0, i + 1).join("/");
+          return (
+            <span key={i} className="flex items-center gap-1">
+              <ChevronRight className="h-3 w-3" />
+              {isLast ? (
+                <span className="text-foreground font-medium">{seg}</span>
+              ) : (
+                <button
+                  onClick={() => router.push(`/site/${encodedRoot}/${partialPath}`)}
+                  className="hover:text-foreground transition-colors"
+                >
+                  {seg}
+                </button>
+              )}
+            </span>
+          );
+        })}
+        {segments.length === 0 && (
+          <>
+            <ChevronRight className="h-3 w-3" />
+            <span className="text-foreground font-medium">/</span>
+          </>
+        )}
+      </nav>
+
       <div className="flex items-center gap-2">
         <h2 className="text-lg font-semibold">{page.title || "Untitled"}</h2>
         <a

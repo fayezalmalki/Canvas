@@ -1,13 +1,16 @@
 "use client";
 
 import { use, useMemo } from "react";
+import { useRouter } from "next/navigation";
 import { useSiteContext } from "@/context/site-context";
 import { PageHeader } from "@/components/page-detail/page-header";
 import { ScreenshotPreview } from "@/components/page-detail/screenshot-preview";
 import { SeoOverview } from "@/components/page-detail/seo-overview";
 import { LinkList } from "@/components/page-detail/link-list";
-import { AnalysisPanel } from "@/components/page-detail/analysis-panel";
+import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Sparkles } from "lucide-react";
+import { scoreSeo } from "@/lib/seo-scorer";
 
 export default function PageDetail({
   params,
@@ -16,12 +19,11 @@ export default function PageDetail({
 }) {
   const { encodedUrl, path } = use(params);
   const rootUrl = decodeURIComponent(encodedUrl);
-  const { crawlResult } = useSiteContext();
+  const { crawlResult, showImages } = useSiteContext();
+  const router = useRouter();
 
-  // Reconstruct the page URL from route params
   const pageUrl = useMemo(() => {
     const pathStr = path.join("/");
-    // Special case: _root means the root page
     if (pathStr === "_root") {
       return rootUrl;
     }
@@ -47,10 +49,40 @@ export default function PageDetail({
     );
   }
 
+  const pathStr = path.join("/");
+  const seoScore = scoreSeo({ url: page.url, title: page.title, seo: page.seo });
+  const scoreColor =
+    seoScore.score >= 80
+      ? "text-emerald-500"
+      : seoScore.score >= 50
+        ? "text-amber-500"
+        : "text-red-500";
+
   return (
     <div className="p-6 space-y-6 max-w-5xl">
-      <PageHeader page={page} />
-      <ScreenshotPreview screenshot={page.screenshot} title={page.title} />
+      <PageHeader page={page} rootUrl={rootUrl} />
+      {showImages && (
+        <ScreenshotPreview screenshot={page.screenshot} title={page.title} />
+      )}
+
+      {/* Quick SEO score + analysis link */}
+      <div className="flex items-center gap-4 rounded-lg border border-border bg-card p-4">
+        <div className={`text-3xl font-bold font-mono ${scoreColor}`}>
+          {seoScore.score}
+        </div>
+        <div className="flex-1">
+          <div className="text-sm font-medium">SEO Score</div>
+          <div className="text-xs text-muted-foreground">{seoScore.summary}</div>
+        </div>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => router.push(`/site/${encodedUrl}/analysis/${pathStr}`)}
+        >
+          <Sparkles className="h-4 w-4" />
+          View Full Analysis
+        </Button>
+      </div>
 
       <Tabs defaultValue="overview">
         <TabsList>
@@ -58,7 +90,6 @@ export default function PageDetail({
           <TabsTrigger value="links">
             Links ({page.outgoingLinks.length})
           </TabsTrigger>
-          <TabsTrigger value="analysis">AI Analysis</TabsTrigger>
         </TabsList>
 
         <TabsContent value="overview" className="mt-4">
@@ -67,10 +98,6 @@ export default function PageDetail({
 
         <TabsContent value="links" className="mt-4">
           <LinkList links={page.outgoingLinks} />
-        </TabsContent>
-
-        <TabsContent value="analysis" className="mt-4">
-          <AnalysisPanel page={page} />
         </TabsContent>
       </Tabs>
     </div>

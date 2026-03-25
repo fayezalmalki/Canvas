@@ -12,6 +12,8 @@ interface SiteContextValue {
   getAnalysis: (url: string) => PageAnalysis | undefined;
   sidebarCollapsed: boolean;
   setSidebarCollapsed: (v: boolean) => void;
+  showImages: boolean;
+  setShowImages: (v: boolean) => void;
 }
 
 const SiteContext = createContext<SiteContextValue | null>(null);
@@ -26,6 +28,7 @@ export function SiteProvider({
   const [crawlResult, setCrawlResult] = useState<CrawlResult | null>(initialData);
   const [analysisCache] = useState(() => new Map<string, PageAnalysis>());
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [showImages, setShowImages] = useState(true);
 
   const setAnalysis = useCallback(
     (url: string, analysis: PageAnalysis) => {
@@ -48,6 +51,8 @@ export function SiteProvider({
       getAnalysis,
       sidebarCollapsed,
       setSidebarCollapsed,
+      showImages,
+      setShowImages,
     }}>
       {children}
     </SiteContext>

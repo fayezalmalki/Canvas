@@ -20,7 +20,7 @@ export default function SiteOverview({
 }) {
   const { encodedUrl } = use(params);
   const rootUrl = decodeURIComponent(encodedUrl);
-  const { crawlResult } = useSiteContext();
+  const { crawlResult, showImages } = useSiteContext();
   const router = useRouter();
 
   if (!crawlResult) return null;
@@ -133,22 +133,24 @@ export default function SiteOverview({
               onClick={() => handlePageClick(page.url)}
               className="group rounded-lg border border-border bg-card overflow-hidden text-left transition-colors hover:border-primary/50"
             >
-              <div className="aspect-video bg-muted overflow-hidden">
-                {page.screenshot ? (
-                  <img
-                    src={page.screenshot}
-                    alt={page.title}
-                    className="h-full w-full object-cover object-top transition-transform group-hover:scale-105"
-                  />
-                ) : (
-                  <div className="h-full w-full flex items-center justify-center flex-col gap-1">
-                    <FileText className="h-6 w-6 text-muted-foreground/40" />
-                    <span className="text-[10px] text-muted-foreground/50 font-mono truncate max-w-[120px]">
-                      {(() => { try { return new URL(page.url).pathname; } catch { return page.url; } })()}
-                    </span>
-                  </div>
-                )}
-              </div>
+              {showImages && (
+                <div className="aspect-video bg-muted overflow-hidden">
+                  {page.screenshot ? (
+                    <img
+                      src={page.screenshot}
+                      alt={page.title}
+                      className="h-full w-full object-cover object-top transition-transform group-hover:scale-105"
+                    />
+                  ) : (
+                    <div className="h-full w-full flex items-center justify-center flex-col gap-1">
+                      <FileText className="h-6 w-6 text-muted-foreground/40" />
+                      <span className="text-[10px] text-muted-foreground/50 font-mono truncate max-w-[120px]">
+                        {(() => { try { return new URL(page.url).pathname; } catch { return page.url; } })()}
+                      </span>
+                    </div>
+                  )}
+                </div>
+              )}
               <div className="p-3 space-y-1">
                 <div className="text-sm font-medium truncate">
                   {page.title || "Untitled"}
