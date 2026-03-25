@@ -1,0 +1,72 @@
+"use client";
+
+import { use } from "react";
+import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
+import { SiteProvider, useSiteContext } from "@/context/site-context";
+import { getCrawlResult } from "@/lib/crawl-store";
+import { SiteHeader } from "@/components/site/site-header";
+import { SiteSidebar } from "@/components/site/site-sidebar";
+import type { CrawlResult } from "@/types/canvas";
+
+function SiteLayoutInner({
+  rootUrl,
+  children,
+}: {
+  rootUrl: string;
+  children: React.ReactNode;
+}) {
+  const { sidebarCollapsed } = useSiteContext();
+
+  return (
+    <div className="flex h-full flex-col">
+      <SiteHeader rootUrl={rootUrl} />
+      <div className="flex flex-1 overflow-hidden">
+        {!sidebarCollapsed && (
+          <div className="w-[260px] shrink-0">
+            <SiteSidebar />
+          </div>
+        )}
+        <main className="flex-1 overflow-auto">{children}</main>
+      </div>
+    </div>
+  );
+}
+
+export default function SiteLayout({
+  params,
+  children,
+}: {
+  params: Promise<{ encodedUrl: string }>;
+  children: React.ReactNode;
+}) {
+  const { encodedUrl } = use(params);
+  const rootUrl = decodeURIComponent(encodedUrl);
+  const router = useRouter();
+  const [crawlData, setCrawlData] = useState<CrawlResult | null>(null);
+  const [checked, setChecked] = useState(false);
+
+  useEffect(() => {
+    const data = getCrawlResult(rootUrl);
+    if (!data) {
+      router.replace("/");
+    } else {
+      setCrawlData(data);
+    }
+    setChecked(true);
+  }, [rootUrl, router]);
+
+  if (!checked || !crawlData) {
+    return (
+      <div className="flex h-full items-center justify-center">
+        <p className="text-sm text-muted-foreground">Loading...</p>
+      </div>
+    );
+  }
+
+  return (
+    <SiteProvider initialData={crawlData}>
+      <SiteLayoutInner rootUrl={rootUrl}>{children}</SiteLayoutInner>
+    </SiteProvider>
+  );
+}

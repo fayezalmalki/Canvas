@@ -1,7 +1,10 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  /* config options here */
+  serverExternalPackages: ["@crawlee/playwright", "@crawlee/browser-pool", "@crawlee/browser", "@crawlee/core", "playwright"],
+  turbopack: {
+    root: __dirname,
+  },
 };
 
 export default nextConfig;

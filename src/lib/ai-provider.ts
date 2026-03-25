@@ -1,0 +1,31 @@
+import { createGroq } from "@ai-sdk/groq";
+import { createMistral } from "@ai-sdk/mistral";
+import { createOpenAI } from "@ai-sdk/openai";
+
+export function getModel() {
+  if (process.env.GROQ_API_KEY) {
+    const groq = createGroq({ apiKey: process.env.GROQ_API_KEY });
+    return groq("llama-3.3-70b-versatile");
+  }
+
+  if (process.env.MISTRAL_API_KEY) {
+    const mistral = createMistral({ apiKey: process.env.MISTRAL_API_KEY });
+    return mistral("mistral-large-latest");
+  }
+
+  if (process.env.OPENAI_API_KEY) {
+    const openai = createOpenAI({ apiKey: process.env.OPENAI_API_KEY });
+    return openai("gpt-4.1");
+  }
+
+  throw new Error(
+    "No AI provider configured. Set GROQ_API_KEY, MISTRAL_API_KEY, or OPENAI_API_KEY in your environment."
+  );
+}
+
+export function getProviderName(): "groq" | "mistral" | "openai" | null {
+  if (process.env.GROQ_API_KEY) return "groq";
+  if (process.env.MISTRAL_API_KEY) return "mistral";
+  if (process.env.OPENAI_API_KEY) return "openai";
+  return null;
+}
