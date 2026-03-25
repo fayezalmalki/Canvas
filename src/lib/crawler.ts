@@ -1,5 +1,11 @@
-import { PlaywrightCrawler, type PlaywrightCrawlingContext } from "@crawlee/playwright";
-import type { CrawlResult, CrawlPageResult, OutgoingLink, PageSeoData, CrawlProgressEvent } from "@/types/canvas";
+import * as cheerio from "cheerio";
+import type {
+  CrawlResult,
+  CrawlPageResult,
+  OutgoingLink,
+  PageSeoData,
+  CrawlProgressEvent,
+} from "@/types/canvas";
 
 interface CrawlOptions {
   maxDepth: number;
@@ -13,183 +19,189 @@ export async function crawlSite(
 ): Promise<CrawlResult> {
   const { maxDepth, maxPages, onProgress } = options;
   const pages: CrawlPageResult[] = [];
+  const visited = new Set<string>();
   const baseOrigin = new URL(startUrl).origin;
 
-  const crawler = new PlaywrightCrawler({
-    maxRequestsPerCrawl: maxPages,
-    maxConcurrency: 3,
-    headless: true,
-    launchContext: {
-      launchOptions: {
-        args: ["--no-sandbox", "--disable-setuid-sandbox"],
-      },
-    },
-    requestHandlerTimeoutSecs: 30,
+  // Queue: [url, depth]
+  const queue: [string, number][] = [[normalizeUrl(startUrl), 0]];
+  visited.add(normalizeUrl(startUrl));
 
-    async requestHandler({ page, request, enqueueLinks }: PlaywrightCrawlingContext) {
-      let statusCode = 200;
-      page.on("response", (response) => {
-        if (response.url() === page.url()) {
-          statusCode = response.status();
-        }
+  while (queue.length > 0 && pages.length < maxPages) {
+    const [url, depth] = queue.shift()!;
+
+    try {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 15000);
+
+      const res = await fetch(url, {
+        signal: controller.signal,
+        headers: {
+          "User-Agent":
+            "Mozilla/5.0 (compatible; SiteAnalyzer/1.0; +https://github.com/fayezalmalki/Canvas)",
+          Accept: "text/html,application/xhtml+xml",
+        },
+        redirect: "follow",
       });
+      clearTimeout(timeout);
 
-      await page.waitForLoadState("networkidle").catch(() => {});
+      const contentType = res.headers.get("content-type") || "";
+      if (!contentType.includes("text/html")) continue;
 
-      const title = await page.title();
+      const html = await res.text();
+      const $ = cheerio.load(html);
+      const statusCode = res.status;
 
-      const screenshotBuffer = await page.screenshot({
-        type: "png",
-        fullPage: false,
-      });
-      const screenshotBase64 = `data:image/png;base64,${screenshotBuffer.toString("base64")}`;
+      // Title
+      const title = $("title").first().text().trim();
 
-      const extracted = await page.evaluate((origin: string) => {
-        const anchors = Array.from(document.querySelectorAll("a[href]"));
-        const seen = new Set<string>();
-        const links: Array<{ url: string; anchorText: string; context: string }> = [];
-        let internalLinkCount = 0;
-        let externalLinkCount = 0;
+      // Extract links
+      const links: OutgoingLink[] = [];
+      const seen = new Set<string>();
+      let internalLinkCount = 0;
+      let externalLinkCount = 0;
 
-        for (const a of anchors) {
-          const href = a.getAttribute("href");
-          if (!href) continue;
-          try {
-            const url = new URL(href, window.location.href);
-            if (url.origin === origin) {
-              internalLinkCount++;
-            } else {
-              externalLinkCount++;
-            }
-            if (url.origin !== origin) continue;
-            url.hash = "";
-            const path = url.pathname.replace(/\/+$/, "") || "/";
-            url.pathname = path;
-            const normalized = url.toString();
-            if (seen.has(normalized)) continue;
-            seen.add(normalized);
-
-            let context: string = "other";
-            if (a.closest("nav")) context = "nav";
-            else if (a.closest("header")) context = "header";
-            else if (a.closest("footer")) context = "footer";
-            else if (a.closest("main, article, section")) context = "main";
-
-            links.push({
-              url: normalized,
-              anchorText: (a.textContent || "").trim().slice(0, 100),
-              context,
-            });
-          } catch {
-            // skip invalid URLs
+      $("a[href]").each((_, el) => {
+        const href = $(el).attr("href");
+        if (!href) return;
+        try {
+          const resolved = new URL(href, url);
+          if (resolved.origin === baseOrigin) {
+            internalLinkCount++;
+          } else {
+            externalLinkCount++;
           }
-        }
+          // Only collect internal links for crawling
+          if (resolved.origin !== baseOrigin) return;
+          resolved.hash = "";
+          const normalized = normalizeUrl(resolved.toString());
+          if (seen.has(normalized)) return;
+          seen.add(normalized);
 
-        const getMeta = (name: string): string | null => {
-          const el = document.querySelector(
-            `meta[name="${name}"], meta[property="${name}"]`
-          );
-          return el?.getAttribute("content") || null;
-        };
+          let context: OutgoingLink["context"] = "other";
+          const parent = $(el).closest("nav, header, footer, main, article, section");
+          if (parent.length) {
+            const tag = parent.prop("tagName")?.toLowerCase();
+            if (tag === "nav") context = "nav";
+            else if (tag === "header") context = "header";
+            else if (tag === "footer") context = "footer";
+            else context = "main";
+          }
 
-        const canonical = document.querySelector('link[rel="canonical"]')?.getAttribute("href") || null;
-
-        const meta = {
-          description: getMeta("description"),
-          keywords: getMeta("keywords"),
-          canonical,
-          ogTitle: getMeta("og:title"),
-          ogDescription: getMeta("og:description"),
-          ogImage: getMeta("og:image"),
-          robots: getMeta("robots"),
-          viewport: getMeta("viewport"),
-          language: document.documentElement.lang || null,
-        };
-
-        const headings: Array<{ tag: string; text: string }> = [];
-        document.querySelectorAll("h1, h2, h3, h4, h5, h6").forEach((el) => {
-          headings.push({
-            tag: el.tagName.toLowerCase(),
-            text: (el.textContent || "").trim().slice(0, 200),
+          links.push({
+            url: normalized,
+            anchorText: $(el).text().trim().slice(0, 100),
+            context,
           });
+        } catch {
+          // skip invalid URLs
+        }
+      });
+
+      // Meta tags
+      const getMeta = (name: string): string | null => {
+        const el =
+          $(`meta[name="${name}"]`).attr("content") ||
+          $(`meta[property="${name}"]`).attr("content");
+        return el || null;
+      };
+
+      const canonical =
+        $('link[rel="canonical"]').attr("href") || null;
+
+      const meta = {
+        description: getMeta("description"),
+        keywords: getMeta("keywords"),
+        canonical,
+        ogTitle: getMeta("og:title"),
+        ogDescription: getMeta("og:description"),
+        ogImage: getMeta("og:image"),
+        robots: getMeta("robots"),
+        viewport: getMeta("viewport"),
+        language: $("html").attr("lang") || null,
+      };
+
+      // Headings
+      const headings: PageSeoData["headings"] = [];
+      $("h1, h2, h3, h4, h5, h6").each((_, el) => {
+        headings.push({
+          tag: $(el).prop("tagName")!.toLowerCase() as any,
+          text: $(el).text().trim().slice(0, 200),
         });
+      });
 
-        const images = document.querySelectorAll("img");
-        const imageCount = images.length;
-        let imagesWithoutAlt = 0;
-        images.forEach((img) => {
-          if (!img.getAttribute("alt")?.trim()) imagesWithoutAlt++;
-        });
+      // Images
+      const images = $("img");
+      const imageCount = images.length;
+      let imagesWithoutAlt = 0;
+      images.each((_, el) => {
+        if (!$(el).attr("alt")?.trim()) imagesWithoutAlt++;
+      });
 
-        const bodyText = (document.body?.innerText || "").trim();
-        const wordCount = bodyText.split(/\s+/).filter(Boolean).length;
+      // Body text
+      $("script, style, noscript").remove();
+      const bodyText = $("body").text().replace(/\s+/g, " ").trim();
+      const wordCount = bodyText.split(/\s+/).filter(Boolean).length;
 
-        const hasStructuredData =
-          document.querySelectorAll('script[type="application/ld+json"]').length > 0;
-
-        const truncatedBody = bodyText.slice(0, 3000);
-
-        return {
-          links,
-          meta,
-          headings,
-          imageCount,
-          imagesWithoutAlt,
-          wordCount,
-          internalLinkCount,
-          externalLinkCount,
-          hasStructuredData,
-          bodyText: truncatedBody,
-        };
-      }, baseOrigin);
+      // Structured data
+      const hasStructuredData =
+        $('script[type="application/ld+json"]').length > 0;
 
       const seo: PageSeoData = {
-        meta: extracted.meta as PageSeoData["meta"],
-        headings: extracted.headings as PageSeoData["headings"],
-        imageCount: extracted.imageCount,
-        imagesWithoutAlt: extracted.imagesWithoutAlt,
-        wordCount: extracted.wordCount,
-        internalLinkCount: extracted.internalLinkCount,
-        externalLinkCount: extracted.externalLinkCount,
-        hasStructuredData: extracted.hasStructuredData,
+        meta,
+        headings,
+        imageCount,
+        imagesWithoutAlt,
+        wordCount,
+        internalLinkCount,
+        externalLinkCount,
+        hasStructuredData,
         statusCode,
       };
 
       pages.push({
-        url: request.loadedUrl || request.url,
+        url: res.url || url,
         title,
-        screenshot: screenshotBase64,
-        outgoingLinks: extracted.links as OutgoingLink[],
+        screenshot: "", // no screenshots in serverless mode
+        outgoingLinks: links,
         seo,
-        bodyText: extracted.bodyText,
+        bodyText: bodyText.slice(0, 3000),
       });
 
-      // Emit progress event
       onProgress?.({
         type: "page_crawled",
-        url: request.loadedUrl || request.url,
+        url: res.url || url,
         title,
         index: pages.length,
         total: maxPages,
       });
 
-      if ((request.userData?.depth ?? 0) < maxDepth) {
-        await enqueueLinks({
-          strategy: "same-origin",
-          userData: { depth: (request.userData?.depth ?? 0) + 1 },
-        });
+      // Enqueue discovered links
+      if (depth < maxDepth) {
+        for (const link of links) {
+          if (!visited.has(link.url) && visited.size < maxPages * 2) {
+            visited.add(link.url);
+            queue.push([link.url, depth + 1]);
+          }
+        }
       }
-    },
-  });
-
-  await crawler.run([{
-    url: startUrl,
-    userData: { depth: 0 },
-  }]);
+    } catch (err: any) {
+      // Skip pages that fail to fetch (timeout, DNS errors, etc.)
+      console.warn(`Failed to crawl ${url}: ${err.message}`);
+    }
+  }
 
   const result: CrawlResult = { pages, rootUrl: startUrl };
-
   onProgress?.({ type: "complete", result });
-
   return result;
+}
+
+function normalizeUrl(raw: string): string {
+  try {
+    const u = new URL(raw);
+    u.hash = "";
+    u.pathname = u.pathname.replace(/\/+$/, "") || "/";
+    return u.toString();
+  } catch {
+    return raw;
+  }
 }
