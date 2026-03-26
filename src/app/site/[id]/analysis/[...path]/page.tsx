@@ -3,6 +3,7 @@
 import { use, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { useSiteContext } from "@/context/site-context";
+import { sitePageUrl, siteRootPageUrl } from "@/lib/navigation";
 import { PageHeader } from "@/components/page-detail/page-header";
 import { AnalysisPanel } from "@/components/page-detail/analysis-panel";
 import { Button } from "@/components/ui/button";
@@ -11,12 +12,12 @@ import { ArrowLeft } from "lucide-react";
 export default function AnalysisPage({
   params,
 }: {
-  params: Promise<{ encodedUrl: string; path: string[] }>;
+  params: Promise<{ id: string; path: string[] }>;
 }) {
-  const { encodedUrl, path } = use(params);
-  const rootUrl = decodeURIComponent(encodedUrl);
-  const { crawlResult } = useSiteContext();
+  const { path } = use(params);
+  const { crawlId, crawlResult } = useSiteContext();
   const router = useRouter();
+  const rootUrl = crawlResult?.rootUrl ?? "";
 
   const pageUrl = useMemo(() => {
     const pathStr = path.join("/");
@@ -48,8 +49,8 @@ export default function AnalysisPage({
 
   const pathStr = path.join("/");
   const backPath = pathStr === "_root"
-    ? `/site/${encodedUrl}/_root`
-    : `/site/${encodedUrl}/${pathStr}`;
+    ? siteRootPageUrl(crawlId)
+    : `/site/${crawlId}/${pathStr}`;
 
   return (
     <div className="p-6 space-y-6 max-w-5xl">
@@ -64,7 +65,7 @@ export default function AnalysisPage({
         <div className="text-sm font-medium">AI Analysis</div>
       </div>
 
-      <PageHeader page={page} rootUrl={rootUrl} />
+      <PageHeader page={page} />
       <AnalysisPanel page={page} />
     </div>
   );

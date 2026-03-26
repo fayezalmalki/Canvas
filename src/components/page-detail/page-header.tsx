@@ -2,13 +2,15 @@
 
 import { useRouter } from "next/navigation";
 import type { CrawlPageResult } from "@/types/canvas";
+import { useSiteContext } from "@/context/site-context";
+import { siteUrl } from "@/lib/navigation";
 import { Badge } from "@/components/ui/badge";
 import { ExternalLink, ChevronRight, Home } from "lucide-react";
 
-export function PageHeader({ page, rootUrl }: { page: CrawlPageResult; rootUrl: string }) {
+export function PageHeader({ page }: { page: CrawlPageResult }) {
   const router = useRouter();
+  const { crawlId } = useSiteContext();
   const pathname = new URL(page.url).pathname;
-  const encodedRoot = encodeURIComponent(rootUrl);
 
   // Build breadcrumb segments from pathname
   const segments = pathname.split("/").filter(Boolean);
@@ -16,9 +18,9 @@ export function PageHeader({ page, rootUrl }: { page: CrawlPageResult; rootUrl: 
   return (
     <div className="space-y-2">
       {/* Breadcrumb */}
-      <nav className="flex items-center gap-1 text-xs text-muted-foreground">
+      <nav className="flex items-center gap-1 text-xs text-muted-foreground" dir="ltr">
         <button
-          onClick={() => router.push(`/site/${encodedRoot}`)}
+          onClick={() => router.push(`/site/${crawlId}`)}
           className="flex items-center gap-1 hover:text-foreground transition-colors"
         >
           <Home className="h-3 w-3" />
@@ -26,7 +28,7 @@ export function PageHeader({ page, rootUrl }: { page: CrawlPageResult; rootUrl: 
         </button>
         {segments.map((seg, i) => {
           const isLast = i === segments.length - 1;
-          const partialPath = segments.slice(0, i + 1).join("/");
+          const partialPath = "/" + segments.slice(0, i + 1).join("/");
           return (
             <span key={i} className="flex items-center gap-1">
               <ChevronRight className="h-3 w-3" />
@@ -34,7 +36,7 @@ export function PageHeader({ page, rootUrl }: { page: CrawlPageResult; rootUrl: 
                 <span className="text-foreground font-medium">{seg}</span>
               ) : (
                 <button
-                  onClick={() => router.push(`/site/${encodedRoot}/${partialPath}`)}
+                  onClick={() => router.push(siteUrl(crawlId, partialPath))}
                   className="hover:text-foreground transition-colors"
                 >
                   {seg}
@@ -52,7 +54,7 @@ export function PageHeader({ page, rootUrl }: { page: CrawlPageResult; rootUrl: 
       </nav>
 
       <div className="flex items-center gap-2">
-        <h2 className="text-lg font-semibold">{page.title || "Untitled"}</h2>
+        <h2 className="text-lg font-semibold" dir="auto">{page.title || "Untitled"}</h2>
         <a
           href={page.url}
           target="_blank"

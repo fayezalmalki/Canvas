@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 import { useRouter, useParams } from "next/navigation";
+import { useSiteContext } from "@/context/site-context";
+import { siteUrl, sitePageUrl } from "@/lib/navigation";
 import type { UrlTreeNode } from "@/lib/url-tree";
 import {
   ChevronRight,
@@ -14,16 +16,14 @@ import {
 
 export function UrlTree({
   node,
-  rootUrl,
   onNavigate,
 }: {
   node: UrlTreeNode;
-  rootUrl: string;
   onNavigate?: () => void;
 }) {
   return (
     <div className="space-y-0.5">
-      <TreeNodeItem node={node} depth={0} rootUrl={rootUrl} defaultOpen onNavigate={onNavigate} />
+      <TreeNodeItem node={node} depth={0} defaultOpen onNavigate={onNavigate} />
     </div>
   );
 }
@@ -31,13 +31,11 @@ export function UrlTree({
 function TreeNodeItem({
   node,
   depth,
-  rootUrl,
   defaultOpen = false,
   onNavigate,
 }: {
   node: UrlTreeNode;
   depth: number;
-  rootUrl: string;
   defaultOpen?: boolean;
   onNavigate?: () => void;
 }) {
@@ -45,6 +43,7 @@ function TreeNodeItem({
   const hasChildren = node.children.length > 0;
   const router = useRouter();
   const params = useParams();
+  const { crawlId } = useSiteContext();
 
   // Determine if this node is the currently active page
   const currentPath = Array.isArray(params.path)
@@ -57,14 +56,7 @@ function TreeNodeItem({
   function handleClick() {
     if (hasChildren) setOpen(!open);
     if (node.crawled && node.url) {
-      const encodedRoot = encodeURIComponent(rootUrl);
-      const parsed = new URL(node.url);
-      const pagePath = parsed.pathname === "/" ? "" : parsed.pathname;
-      if (pagePath) {
-        router.push(`/site/${encodedRoot}/${pagePath.slice(1)}`);
-      } else {
-        router.push(`/site/${encodedRoot}`);
-      }
+      router.push(sitePageUrl(crawlId, node.url));
       onNavigate?.();
     }
   }
@@ -122,7 +114,6 @@ function TreeNodeItem({
             key={child.fullPath}
             node={child}
             depth={depth + 1}
-            rootUrl={rootUrl}
             onNavigate={onNavigate}
           />
         ))}

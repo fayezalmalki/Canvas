@@ -122,6 +122,7 @@ export interface RobotsSitemapResult {
 }
 
 export interface CrawlResult {
+  _id?: string;
   pages: CrawlPageResult[];
   rootUrl: string;
   discoveredUrls: string[];

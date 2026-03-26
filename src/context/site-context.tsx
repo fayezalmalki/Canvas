@@ -4,9 +4,11 @@ import { createContext, useContext, useState, useCallback, type ReactNode } from
 import type { CrawlResult, PageAnalysis } from "@/types/canvas";
 
 interface SiteContextValue {
+  crawlId: string;
   crawlResult: CrawlResult | null;
   setCrawlResult: (r: CrawlResult | null) => void;
   discoveredUrls: string[];
+  isArabicSite: boolean;
   // In-memory cache for current session (Convex handles persistence)
   analysisCache: Map<string, PageAnalysis>;
   setAnalysis: (url: string, analysis: PageAnalysis) => void;
@@ -20,12 +22,16 @@ interface SiteContextValue {
 const SiteContext = createContext<SiteContextValue | null>(null);
 
 export function SiteProvider({
+  crawlId,
   initialData,
   initialDiscoveredUrls,
+  isArabicSite = false,
   children,
 }: {
+  crawlId: string;
   initialData: CrawlResult | null;
   initialDiscoveredUrls?: string[];
+  isArabicSite?: boolean;
   children: ReactNode;
 }) {
   const [crawlResult, setCrawlResult] = useState<CrawlResult | null>(initialData);
@@ -47,9 +53,11 @@ export function SiteProvider({
 
   return (
     <SiteContext value={{
+      crawlId,
       crawlResult,
       setCrawlResult,
       discoveredUrls: initialDiscoveredUrls ?? [],
+      isArabicSite,
       analysisCache,
       setAnalysis,
       getAnalysis,

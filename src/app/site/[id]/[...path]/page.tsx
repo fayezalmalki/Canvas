@@ -3,6 +3,7 @@
 import { use, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { useSiteContext } from "@/context/site-context";
+import { sitePageUrl, siteAnalysisUrl } from "@/lib/navigation";
 import { PageHeader } from "@/components/page-detail/page-header";
 import { ScreenshotPreview } from "@/components/page-detail/screenshot-preview";
 import { SeoOverview } from "@/components/page-detail/seo-overview";
@@ -16,12 +17,12 @@ import { scoreSeo } from "@/lib/seo-scorer";
 export default function PageDetail({
   params,
 }: {
-  params: Promise<{ encodedUrl: string; path: string[] }>;
+  params: Promise<{ id: string; path: string[] }>;
 }) {
-  const { encodedUrl, path } = use(params);
-  const rootUrl = decodeURIComponent(encodedUrl);
-  const { crawlResult, showImages } = useSiteContext();
+  const { path } = use(params);
+  const { crawlId, crawlResult, showImages } = useSiteContext();
   const router = useRouter();
+  const rootUrl = crawlResult?.rootUrl ?? "";
 
   const pageUrl = useMemo(() => {
     const pathStr = path.join("/");
@@ -66,20 +67,9 @@ export default function PageDetail({
         ? "text-amber-500"
         : "text-red-500";
 
-  function navigateToPage(pageUrl: string) {
-    const parsed = new URL(pageUrl);
-    const pagePath = parsed.pathname === "/" ? "" : parsed.pathname;
-    const encodedRoot = encodeURIComponent(rootUrl);
-    if (pagePath) {
-      router.push(`/site/${encodedRoot}/${pagePath.slice(1)}`);
-    } else {
-      router.push(`/site/${encodedRoot}/_root`);
-    }
-  }
-
   return (
     <div className="p-6 space-y-6 max-w-5xl">
-      <PageHeader page={page} rootUrl={rootUrl} />
+      <PageHeader page={page} />
       {showImages && (
         <ScreenshotPreview screenshot={page.screenshot} title={page.title} />
       )}
@@ -112,7 +102,7 @@ export default function PageDetail({
         <Button
           variant="outline"
           size="sm"
-          onClick={() => router.push(`/site/${encodedUrl}/analysis/${pathStr}`)}
+          onClick={() => router.push(siteAnalysisUrl(crawlId, pathStr))}
         >
           <Sparkles className="h-4 w-4" />
           View Full Analysis
@@ -141,7 +131,7 @@ export default function PageDetail({
         <div className="flex items-stretch gap-3 pt-2 border-t border-border">
           {prevPage ? (
             <button
-              onClick={() => navigateToPage(prevPage.url)}
+              onClick={() => router.push(sitePageUrl(crawlId, prevPage.url))}
               className="flex-1 flex items-center gap-2 rounded-lg border border-border bg-card p-3 text-left transition-colors hover:border-primary/50 min-w-0"
             >
               <ChevronLeft className="h-4 w-4 shrink-0 text-muted-foreground" />
@@ -158,7 +148,7 @@ export default function PageDetail({
           )}
           {nextPage ? (
             <button
-              onClick={() => navigateToPage(nextPage.url)}
+              onClick={() => router.push(sitePageUrl(crawlId, nextPage.url))}
               className="flex-1 flex items-center gap-2 rounded-lg border border-border bg-card p-3 text-right transition-colors hover:border-primary/50 min-w-0 justify-end"
             >
               <div className="min-w-0">

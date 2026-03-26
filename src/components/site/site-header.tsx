@@ -16,18 +16,21 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import {
-  ArrowLeft,
+  Home,
   PanelLeftClose,
   PanelLeft,
   MessageSquare,
   ImageIcon,
   ImageOff,
   Menu,
+  Share2,
+  Check,
 } from "lucide-react";
 
-export function SiteHeader({ rootUrl, onMobileMenuToggle }: { rootUrl: string; onMobileMenuToggle?: () => void }) {
+export function SiteHeader({ onMobileMenuToggle }: { onMobileMenuToggle?: () => void }) {
   const router = useRouter();
   const {
+    crawlId,
     crawlResult,
     sidebarCollapsed,
     setSidebarCollapsed,
@@ -35,11 +38,13 @@ export function SiteHeader({ rootUrl, onMobileMenuToggle }: { rootUrl: string; o
     setShowImages,
   } = useSiteContext();
   const [chatOpen, setChatOpen] = useState(false);
+  const [copied, setCopied] = useState(false);
   const pageCount = useMemo(() => {
     if (!crawlResult) return 0;
     return deduplicatePages(crawlResult.pages).length;
   }, [crawlResult]);
 
+  const rootUrl = crawlResult?.rootUrl ?? "";
   let domain = "";
   try {
     domain = new URL(rootUrl).hostname;
@@ -47,8 +52,18 @@ export function SiteHeader({ rootUrl, onMobileMenuToggle }: { rootUrl: string; o
     domain = rootUrl;
   }
 
+  async function handleCopyLink() {
+    try {
+      await navigator.clipboard.writeText(window.location.href);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      // fallback
+    }
+  }
+
   return (
-    <header className="flex h-12 items-center gap-2 border-b border-border bg-card px-3">
+    <header className="flex h-12 items-center gap-2 border-b border-border bg-card px-3" dir="ltr">
       {/* Mobile hamburger */}
       <Button
         variant="ghost"
@@ -75,11 +90,19 @@ export function SiteHeader({ rootUrl, onMobileMenuToggle }: { rootUrl: string; o
 
       <Separator orientation="vertical" className="h-5" />
 
+      {/* Home button */}
+      <Tooltip>
+        <TooltipTrigger
+          render={<Button variant="ghost" size="icon-sm" />}
+          onClick={() => router.push("/")}
+        >
+          <Home className="h-4 w-4" />
+        </TooltipTrigger>
+        <TooltipContent>Back to Home</TooltipContent>
+      </Tooltip>
+
       <button
-        onClick={() => {
-          const encodedRoot = encodeURIComponent(rootUrl);
-          router.push(`/site/${encodedRoot}`);
-        }}
+        onClick={() => router.push(`/site/${crawlId}`)}
         className="flex items-center gap-2 hover:opacity-80 transition-opacity min-w-0"
       >
         <span className="text-sm font-bold text-gradient-brand shrink-0">بصيرة</span>
@@ -93,6 +116,23 @@ export function SiteHeader({ rootUrl, onMobileMenuToggle }: { rootUrl: string; o
       )}
 
       <div className="ml-auto flex items-center gap-1.5">
+        {/* Share/Copy Link */}
+        <Tooltip>
+          <TooltipTrigger
+            render={<Button variant="ghost" size="icon-sm" />}
+            onClick={handleCopyLink}
+          >
+            {copied ? (
+              <Check className="h-4 w-4 text-emerald-500" />
+            ) : (
+              <Share2 className="h-4 w-4" />
+            )}
+          </TooltipTrigger>
+          <TooltipContent>
+            {copied ? "Copied!" : "Copy link"}
+          </TooltipContent>
+        </Tooltip>
+
         <Tooltip>
           <TooltipTrigger
             render={<Button variant="ghost" size="icon-sm" className="hidden sm:inline-flex" />}
@@ -131,14 +171,6 @@ export function SiteHeader({ rootUrl, onMobileMenuToggle }: { rootUrl: string; o
         </Sheet>
 
         <ThemeToggle />
-
-        <Button
-          variant="ghost"
-          size="icon-sm"
-          onClick={() => router.push("/")}
-        >
-          <ArrowLeft className="h-4 w-4" />
-        </Button>
       </div>
     </header>
   );

@@ -3,6 +3,7 @@
 import { useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { useSiteContext } from "@/context/site-context";
+import { sitePageUrl } from "@/lib/navigation";
 import { buildUrlTree, filterTree } from "@/lib/url-tree";
 import { deduplicatePages } from "@/lib/dedup-pages";
 import { UrlTree } from "./url-tree";
@@ -20,7 +21,7 @@ interface ProductWithPage extends ProductData {
 }
 
 export function SiteSidebar({ onNavigate }: { onNavigate?: () => void } = {}) {
-  const { crawlResult } = useSiteContext();
+  const { crawlId, crawlResult } = useSiteContext();
   const [search, setSearch] = useState("");
   const [tab, setTab] = useState<SidebarTab>("pages");
   const router = useRouter();
@@ -89,18 +90,7 @@ export function SiteSidebar({ onNavigate }: { onNavigate?: () => void } = {}) {
   if (!crawlResult) return null;
 
   function navigateToPage(url: string) {
-    const encodedRoot = encodeURIComponent(crawlResult!.rootUrl);
-    try {
-      const parsed = new URL(url);
-      const pagePath = parsed.pathname === "/" ? "" : parsed.pathname;
-      if (pagePath) {
-        router.push(`/site/${encodedRoot}/${pagePath.slice(1)}`);
-      } else {
-        router.push(`/site/${encodedRoot}`);
-      }
-    } catch {
-      router.push(`/site/${encodedRoot}`);
-    }
+    router.push(sitePageUrl(crawlId, url));
     onNavigate?.();
   }
 
@@ -161,7 +151,7 @@ export function SiteSidebar({ onNavigate }: { onNavigate?: () => void } = {}) {
       <ScrollArea className="flex-1 p-2">
         {tab === "pages" ? (
           filteredTree ? (
-            <UrlTree node={filteredTree} rootUrl={crawlResult.rootUrl} onNavigate={onNavigate} />
+            <UrlTree node={filteredTree} onNavigate={onNavigate} />
           ) : (
             <div className="flex flex-col items-center justify-center py-8 text-center">
               <Folder className="mb-2 h-6 w-6 text-muted-foreground/50" />

@@ -147,6 +147,38 @@ export const storeCrawlResult = mutation({
   },
 });
 
+export const getCrawlById = query({
+  args: { id: v.id("crawls") },
+  handler: async (ctx, args) => {
+    const crawl = await ctx.db.get(args.id);
+    if (!crawl) return null;
+
+    const pages = await ctx.db
+      .query("pages")
+      .withIndex("by_crawl_id", (q) => q.eq("crawlId", crawl._id))
+      .collect();
+
+    return {
+      _id: crawl._id,
+      rootUrl: crawl.rootUrl,
+      discoveredUrls: crawl.discoveredUrls ?? [],
+      brokenLinks: crawl.brokenLinks ?? [],
+      redirectChains: crawl.redirectChains ?? [],
+      createdAt: crawl.createdAt,
+      pages: pages.map((p) => ({
+        url: p.url,
+        title: p.title,
+        screenshot: p.screenshot,
+        bodyText: p.bodyText,
+        outgoingLinks: p.outgoingLinks,
+        seo: p.seo,
+        products: p.products,
+        botProtection: p.botProtection,
+      })),
+    };
+  },
+});
+
 export const getCrawlByUrl = query({
   args: { rootUrl: v.string() },
   handler: async (ctx, args) => {

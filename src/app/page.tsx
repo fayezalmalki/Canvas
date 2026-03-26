@@ -102,7 +102,7 @@ export default function Home() {
               ]);
               setCrawlCount({ current: event.index, total: event.total, discovered: event.discovered ?? 0 });
             } else if (event.type === "complete" && event.result) {
-              await storeCrawl({
+              const crawlId = await storeCrawl({
                 rootUrl: normalizedUrl,
                 pages: event.result.pages.map((p: any) => ({
                   ...p,
@@ -112,7 +112,7 @@ export default function Home() {
                 brokenLinks: event.result.brokenLinks ?? [],
                 redirectChains: event.result.redirectChains ?? [],
               });
-              router.push(`/site/${encodeURIComponent(normalizedUrl)}`);
+              router.push(`/site/${crawlId}`);
               return;
             } else if (event.type === "error") {
               throw new Error(event.message);
@@ -329,9 +329,7 @@ export default function Home() {
                   <button
                     key={crawl._id}
                     onClick={() =>
-                      router.push(
-                        `/site/${encodeURIComponent(crawl.rootUrl)}`
-                      )
+                      router.push(`/site/${crawl._id}`)
                     }
                     className="flex w-full items-center gap-3 rounded-lg border border-border bg-card p-3 text-left transition-colors hover:border-primary/50"
                   >

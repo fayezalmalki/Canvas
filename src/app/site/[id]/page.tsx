@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useMutation } from "convex/react";
 import { api } from "@convex/_generated/api";
 import { useSiteContext } from "@/context/site-context";
+import { sitePageUrl, siteRootPageUrl } from "@/lib/navigation";
 import { deduplicatePages } from "@/lib/dedup-pages";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -12,6 +13,10 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { BrokenLinksPanel } from "@/components/site/broken-links-panel";
 import { ContentIssuesPanel } from "@/components/site/content-issues-panel";
 import { ProductsPanel } from "@/components/site/products-panel";
+import { InternalLinksPanel } from "@/components/site/internal-links-panel";
+import { ExternalLinksPanel } from "@/components/site/external-links-panel";
+import { ImagesPanel } from "@/components/site/images-panel";
+import { SeoGuidePanel } from "@/components/site/seo-guide-panel";
 import {
   FileText,
   Link2,
@@ -34,27 +39,29 @@ import {
   ShoppingCart,
   ArrowUpDown,
   Shield,
+  Sparkles,
 } from "lucide-react";
 import type { CrawlPageResult } from "@/types/canvas";
 import { scoreSeo } from "@/lib/seo-scorer";
 
 type ViewMode = "list" | "grid";
-type PageSort = "route" | "seo-score" | "response-time" | "word-count";
+type PageSort = "smart" | "route" | "seo-score" | "response-time" | "word-count";
 
 export default function SiteOverview({
   params,
 }: {
-  params: Promise<{ encodedUrl: string }>;
+  params: Promise<{ id: string }>;
 }) {
-  const { encodedUrl } = use(params);
-  const rootUrl = decodeURIComponent(encodedUrl);
-  const { crawlResult, showImages, discoveredUrls, setCrawlResult } = useSiteContext();
+  const { id } = use(params);
+  const { crawlId, crawlResult, showImages, discoveredUrls, setCrawlResult } = useSiteContext();
+  const rootUrl = crawlResult?.rootUrl ?? "";
   const router = useRouter();
   const storeCrawl = useMutation(api.crawls.storeCrawlResult);
   const [continueCrawling, setContinueCrawling] = useState(false);
   const [continueProgress, setContinueProgress] = useState({ current: 0, total: 0 });
   const [viewMode, setViewMode] = useState<ViewMode>("list");
-  const [pageSort, setPageSort] = useState<PageSort>("route");
+  const [pageSort, setPageSort] = useState<PageSort>("smart");
+  const [activeTab, setActiveTab] = useState("pages");
 
   if (!crawlResult) return null;
 
@@ -98,28 +105,31 @@ export default function SiteOverview({
   const totalProducts = allProducts.length;
 
   const stats = [
-    { label: "Pages", value: pages.length, icon: FileText },
-    { label: "Avg SEO Score", value: avgSeoScore, icon: Gauge, color: avgScoreColor },
-    { label: "Internal Links", value: totalInternalLinks, icon: Link2 },
-    { label: "External Links", value: totalExternalLinks, icon: ExternalLinkIcon },
-    { label: "Images", value: totalImages, icon: Image },
+    { label: "Pages", value: pages.length, icon: FileText, tab: "pages" },
+    { label: "Avg SEO Score", value: avgSeoScore, icon: Gauge, color: avgScoreColor, tab: "seo-guide" },
+    { label: "Internal Links", value: totalInternalLinks, icon: Link2, tab: "internal-links" },
+    { label: "External Links", value: totalExternalLinks, icon: ExternalLinkIcon, tab: "external-links" },
+    { label: "Images", value: totalImages, icon: Image, tab: "images" },
     {
       label: "Missing Alt",
       value: missingAlt,
       icon: AlertTriangle,
       warning: missingAlt > 0,
+      tab: "images",
     },
     {
       label: "No Meta Desc",
       value: missingDescription,
       icon: Search,
       warning: missingDescription > 0,
+      tab: "content",
     },
     ...(brokenLinksCount > 0 ? [{
       label: "Broken Links",
       value: brokenLinksCount,
       icon: Link2Off,
       warning: true,
+      tab: "broken-links",
     }] : []),
     ...(avgResponseTime !== null ? [{
       label: "Avg Response",
@@ -127,6 +137,7 @@ export default function SiteOverview({
       icon: Timer,
       suffix: "ms",
       warning: avgResponseTime > 3000,
+      tab: "pages",
     }] : []),
   ];
 
@@ -158,6 +169,23 @@ export default function SiteOverview({
     if (pageSort === "route") return pages;
     return [...pages].sort((a, b) => {
       switch (pageSort) {
+        case "smart": {
+          // Homepage first
+          const aIsHome = (() => { try { return new URL(a.url).pathname === "/"; } catch { return false; } })();
+          const bIsHome = (() => { try { return new URL(b.url).pathname === "/"; } catch { return false; } })();
+          if (aIsHome && !bIsHome) return -1;
+          if (bIsHome && !aIsHome) return 1;
+          // Bot-protected / 0-word / error pages last
+          const aIsBad = !!a.botProtection || a.seo.wordCount === 0 || a.seo.statusCode >= 400;
+          const bIsBad = !!b.botProtection || b.seo.wordCount === 0 || b.seo.statusCode >= 400;
+          if (aIsBad && !bIsBad) return 1;
+          if (bIsBad && !aIsBad) return -1;
+          // Among good pages: sort by SEO score desc, then word count desc
+          const aScore = scoreSeo({ url: a.url, title: a.title, seo: a.seo }).score;
+          const bScore = scoreSeo({ url: b.url, title: b.title, seo: b.seo }).score;
+          if (bScore !== aScore) return bScore - aScore;
+          return b.seo.wordCount - a.seo.wordCount;
+        }
         case "seo-score":
           return scoreSeo({ url: b.url, title: b.title, seo: b.seo }).score -
                  scoreSeo({ url: a.url, title: a.title, seo: a.seo }).score;
@@ -239,14 +267,7 @@ export default function SiteOverview({
   }
 
   function handlePageClick(pageUrl: string) {
-    const parsed = new URL(pageUrl);
-    const pagePath = parsed.pathname === "/" ? "" : parsed.pathname;
-    const encodedRoot = encodeURIComponent(rootUrl);
-    if (pagePath) {
-      router.push(`/site/${encodedRoot}/${pagePath.slice(1)}`);
-    } else {
-      router.push(`/site/${encodedRoot}/_root`);
-    }
+    router.push(sitePageUrl(crawlId, pageUrl));
   }
 
   return (
@@ -262,9 +283,10 @@ export default function SiteOverview({
       {/* Stats grid */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
         {stats.map((stat) => (
-          <div
+          <button
             key={stat.label}
-            className="rounded-lg border border-border bg-card p-3 space-y-1"
+            onClick={() => stat.tab && setActiveTab(stat.tab)}
+            className="rounded-lg border border-border bg-card p-3 space-y-1 text-left transition-colors hover:border-primary/50 cursor-pointer"
           >
             <div className="flex items-center gap-1.5">
               <stat.icon
@@ -275,7 +297,7 @@ export default function SiteOverview({
             <div className={`text-xl font-semibold font-mono ${"color" in stat && stat.color ? stat.color : stat.warning ? "text-amber-500" : ""}`}>
               {stat.value}{"suffix" in stat && stat.suffix ? stat.suffix : ""}
             </div>
-          </div>
+          </button>
         ))}
       </div>
 
@@ -305,10 +327,23 @@ export default function SiteOverview({
       )}
 
       {/* Audit Tabs */}
-      <Tabs defaultValue="pages">
-        <TabsList>
+      <Tabs value={activeTab} onValueChange={setActiveTab}>
+        <TabsList className="flex-wrap">
           <TabsTrigger value="pages">
             Pages ({pages.length})
+          </TabsTrigger>
+          <TabsTrigger value="seo-guide">
+            <Sparkles className="h-3.5 w-3.5" />
+            SEO Guide
+          </TabsTrigger>
+          <TabsTrigger value="internal-links">
+            Internal Links
+          </TabsTrigger>
+          <TabsTrigger value="external-links">
+            External Links
+          </TabsTrigger>
+          <TabsTrigger value="images">
+            Images
           </TabsTrigger>
           {(brokenLinksCount > 0 || redirectChainsCount > 0) && (
             <TabsTrigger value="broken-links">
@@ -349,6 +384,7 @@ export default function SiteOverview({
                 onChange={(e) => setPageSort(e.target.value as PageSort)}
                 className="h-8 rounded-md border border-border bg-card px-2 text-xs text-foreground"
               >
+                <option value="smart">Smart (Recommended)</option>
                 <option value="route">Group by Route</option>
                 <option value="seo-score">SEO Score (High → Low)</option>
                 <option value="response-time">Response Time (Fast → Slow)</option>
@@ -430,6 +466,22 @@ export default function SiteOverview({
             />
           </TabsContent>
         )}
+
+        <TabsContent value="seo-guide" className="mt-4">
+          <SeoGuidePanel pages={pages} />
+        </TabsContent>
+
+        <TabsContent value="internal-links" className="mt-4">
+          <InternalLinksPanel pages={pages} />
+        </TabsContent>
+
+        <TabsContent value="external-links" className="mt-4">
+          <ExternalLinksPanel pages={pages} />
+        </TabsContent>
+
+        <TabsContent value="images" className="mt-4">
+          <ImagesPanel pages={pages} />
+        </TabsContent>
 
         <TabsContent value="content" className="mt-4">
           <ContentIssuesPanel pages={pages} />
