@@ -5,7 +5,7 @@ export const maxDuration = 300;
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { url, maxDepth = 2, maxPages = 20, onlyUrls } = body;
+    const { url, maxDepth = 2, maxPages = 20, onlyUrls, screenshots = true } = body;
 
     if (!url || typeof url !== "string") {
       return new Response(JSON.stringify({ error: "URL is required" }), {
@@ -43,6 +43,7 @@ export async function POST(request: Request) {
             await crawlSite(url, {
               maxDepth: depth,
               maxPages: pages,
+              screenshots,
               onProgress: (event) => send(event),
             });
           }

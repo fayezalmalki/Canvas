@@ -285,11 +285,11 @@ function ProductCard({ product }: { product: ProductWithPage }) {
 
       <div className="p-3 space-y-2">
         {/* Name */}
-        <div className="text-sm font-medium line-clamp-2">{product.name}</div>
+        <div className="text-sm font-medium line-clamp-2" dir="auto">{product.name}</div>
 
         {/* Description */}
         {product.description && (
-          <p className="text-[11px] text-muted-foreground line-clamp-2">{product.description}</p>
+          <p className="text-[11px] text-muted-foreground line-clamp-2" dir="auto">{product.description}</p>
         )}
 
         {/* Price */}

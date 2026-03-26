@@ -147,7 +147,7 @@ export default function PageDetail({
               <ChevronLeft className="h-4 w-4 shrink-0 text-muted-foreground" />
               <div className="min-w-0">
                 <div className="text-[11px] text-muted-foreground">Previous</div>
-                <div className="text-sm truncate">{prevPage.title || "Untitled"}</div>
+                <div className="text-sm truncate" dir="auto">{prevPage.title || "Untitled"}</div>
                 <div className="text-[11px] text-muted-foreground font-mono truncate">
                   {(() => { try { return new URL(prevPage.url).pathname; } catch { return prevPage.url; } })()}
                 </div>
@@ -163,7 +163,7 @@ export default function PageDetail({
             >
               <div className="min-w-0">
                 <div className="text-[11px] text-muted-foreground">Next</div>
-                <div className="text-sm truncate">{nextPage.title || "Untitled"}</div>
+                <div className="text-sm truncate" dir="auto">{nextPage.title || "Untitled"}</div>
                 <div className="text-[11px] text-muted-foreground font-mono truncate">
                   {(() => { try { return new URL(nextPage.url).pathname; } catch { return nextPage.url; } })()}
                 </div>

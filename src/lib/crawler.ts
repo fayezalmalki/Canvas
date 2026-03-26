@@ -34,9 +34,63 @@ function detectBotProtection(html: string, status: number): string | null {
   return null;
 }
 
+/**
+ * Capture a screenshot of a URL using microlink API.
+ * Returns a base64 data URL or "" on failure.
+ */
+async function captureScreenshot(url: string): Promise<string> {
+  try {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 8000);
+
+    const apiUrl = `https://api.microlink.io/?url=${encodeURIComponent(url)}&screenshot=true&meta=false&embed=screenshot.url`;
+    const res = await fetch(apiUrl, {
+      signal: controller.signal,
+      headers: { "User-Agent": BROWSER_USER_AGENT },
+    });
+    clearTimeout(timeout);
+
+    if (!res.ok) return "";
+
+    // The embed=screenshot.url makes microlink return the image directly
+    const contentType = res.headers.get("content-type") || "";
+    if (contentType.startsWith("image/")) {
+      const buffer = await res.arrayBuffer();
+      const base64 = Buffer.from(buffer).toString("base64");
+      return `data:${contentType};base64,${base64}`;
+    }
+
+    // Fallback: parse JSON response
+    const data = await res.json();
+    const screenshotUrl = data?.data?.screenshot?.url;
+    if (!screenshotUrl) return "";
+
+    const imgRes = await fetch(screenshotUrl, {
+      signal: AbortSignal.timeout(5000),
+    });
+    if (!imgRes.ok) return "";
+    const imgBuffer = await imgRes.arrayBuffer();
+    const imgType = imgRes.headers.get("content-type") || "image/png";
+    const imgBase64 = Buffer.from(imgBuffer).toString("base64");
+    return `data:${imgType};base64,${imgBase64}`;
+  } catch {
+    return "";
+  }
+}
+
+/**
+ * Use OG image as fallback screenshot when microlink fails.
+ */
+function getOgImageFallback(ogImage: string | null): string {
+  // OG images are already URLs, we'll store as-is (not base64) for efficiency
+  if (ogImage && ogImage.startsWith("http")) return ogImage;
+  return "";
+}
+
 interface CrawlOptions {
   maxDepth: number;
   maxPages: number;
+  screenshots?: boolean;
   onProgress?: (event: CrawlProgressEvent) => void;
 }
 
@@ -44,7 +98,7 @@ export async function crawlSite(
   startUrl: string,
   options: CrawlOptions = { maxDepth: 2, maxPages: 20 }
 ): Promise<CrawlResult> {
-  const { maxDepth, maxPages, onProgress } = options;
+  const { maxDepth, maxPages, screenshots = true, onProgress } = options;
   const pages: CrawlPageResult[] = [];
   const visited = new Set<string>();
   const baseOrigin = new URL(startUrl).origin;
@@ -228,10 +282,19 @@ export async function crawlSite(
         i18n,
       };
 
+      // Capture screenshot (non-blocking — falls back to OG image or "")
+      let screenshot = "";
+      if (screenshots && !botProtection) {
+        screenshot = await captureScreenshot(res.url || url);
+        if (!screenshot) {
+          screenshot = getOgImageFallback(seo.meta.ogImage);
+        }
+      }
+
       pages.push({
         url: res.url || url,
         title,
-        screenshot: "", // no screenshots in serverless mode
+        screenshot,
         outgoingLinks: botProtection ? [] : links,
         seo,
         bodyText: botProtection ? "" : bodyText.slice(0, 3000),
@@ -447,10 +510,19 @@ export async function crawlSpecificUrls(
         i18n,
       };
 
+      // Capture screenshot (non-blocking)
+      let screenshot = "";
+      if (!botProtection) {
+        screenshot = await captureScreenshot(res.url || url);
+        if (!screenshot) {
+          screenshot = getOgImageFallback(seo.meta.ogImage);
+        }
+      }
+
       pages.push({
         url: res.url || url,
         title,
-        screenshot: "",
+        screenshot,
         outgoingLinks: botProtection ? [] : links,
         seo,
         bodyText: botProtection ? "" : bodyText.slice(0, 3000),

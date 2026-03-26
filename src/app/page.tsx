@@ -34,6 +34,7 @@ export default function Home() {
   const [maxDepth, setMaxDepth] = useState(2);
   const [maxPages, setMaxPages] = useState(20);
   const [showAdvanced, setShowAdvanced] = useState(false);
+  const [screenshots, setScreenshots] = useState(true);
   const [crawling, setCrawling] = useState(false);
   const [crawledPages, setCrawledPages] = useState<CrawledPage[]>([]);
   const [crawlCount, setCrawlCount] = useState({ current: 0, total: 20, discovered: 0 });
@@ -66,7 +67,7 @@ export default function Home() {
       const res = await fetch("/api/crawl", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ url: normalizedUrl, maxDepth, maxPages }),
+        body: JSON.stringify({ url: normalizedUrl, maxDepth, maxPages, screenshots }),
       });
 
       if (!res.ok) {
@@ -182,33 +183,46 @@ export default function Home() {
           )}
 
           {showAdvanced && !crawling && (
-            <div className="flex gap-4">
-              <div className="flex-1 space-y-1">
-                <label className="text-xs text-muted-foreground">
-                  Max Depth
-                </label>
-                <Input
-                  type="number"
-                  min={1}
-                  max={5}
-                  value={maxDepth}
-                  onChange={(e) => setMaxDepth(Number(e.target.value))}
-                  className="h-8 text-sm font-mono"
-                />
+            <div className="space-y-3">
+              <div className="flex gap-4">
+                <div className="flex-1 space-y-1">
+                  <label className="text-xs text-muted-foreground">
+                    Max Depth
+                  </label>
+                  <Input
+                    type="number"
+                    min={1}
+                    max={5}
+                    value={maxDepth}
+                    onChange={(e) => setMaxDepth(Number(e.target.value))}
+                    className="h-8 text-sm font-mono"
+                  />
+                </div>
+                <div className="flex-1 space-y-1">
+                  <label className="text-xs text-muted-foreground">
+                    Max Pages
+                  </label>
+                  <Input
+                    type="number"
+                    min={1}
+                    max={50}
+                    value={maxPages}
+                    onChange={(e) => setMaxPages(Number(e.target.value))}
+                    className="h-8 text-sm font-mono"
+                  />
+                </div>
               </div>
-              <div className="flex-1 space-y-1">
-                <label className="text-xs text-muted-foreground">
-                  Max Pages
-                </label>
-                <Input
-                  type="number"
-                  min={1}
-                  max={50}
-                  value={maxPages}
-                  onChange={(e) => setMaxPages(Number(e.target.value))}
-                  className="h-8 text-sm font-mono"
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={screenshots}
+                  onChange={(e) => setScreenshots(e.target.checked)}
+                  className="h-3.5 w-3.5 rounded border-border accent-primary"
                 />
-              </div>
+                <span className="text-xs text-muted-foreground">
+                  Capture page screenshots (slower but provides visual previews)
+                </span>
+              </label>
             </div>
           )}
 

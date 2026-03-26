@@ -495,7 +495,7 @@ function I18nSummary({ pages }: { pages: CrawlPageResult[] }) {
                     {Math.round((page.seo.i18n?.arabicRatio ?? 0) * 100)}% Arabic
                   </Badge>
                   <div className="min-w-0">
-                    <div className="text-sm truncate">{page.title || "Untitled"}</div>
+                    <div className="text-sm truncate" dir="auto">{page.title || "Untitled"}</div>
                     <div className="text-[11px] text-muted-foreground font-mono truncate">{pathname}</div>
                   </div>
                 </div>
@@ -530,7 +530,7 @@ function I18nSummary({ pages }: { pages: CrawlPageResult[] }) {
                     )}
                   </div>
                   <div className="min-w-0">
-                    <div className="text-sm truncate">{page.title || "Untitled"}</div>
+                    <div className="text-sm truncate" dir="auto">{page.title || "Untitled"}</div>
                     <div className="text-[11px] text-muted-foreground font-mono truncate">{pathname}</div>
                   </div>
                 </div>
@@ -560,7 +560,7 @@ function PageListItem({ page, onClick, sortMode }: { page: CrawlPageResult; onCl
     >
       <div className="flex-1 min-w-0 space-y-1">
         <div className="flex items-center gap-2">
-          <span className="text-sm font-medium truncate">
+          <span className="text-sm font-medium truncate" dir="auto">
             {page.title || "Untitled"}
           </span>
           {lang && (
@@ -590,7 +590,7 @@ function PageListItem({ page, onClick, sortMode }: { page: CrawlPageResult; onCl
           )}
           {page.seo.headings.filter(h => h.tag === "h1").length > 0 && (
             <span className="truncate max-w-[200px]">
-              H1: {page.seo.headings.find(h => h.tag === "h1")?.text}
+              <span dir="auto">H1: {page.seo.headings.find(h => h.tag === "h1")?.text}</span>
             </span>
           )}
         </div>}
@@ -684,7 +684,7 @@ function PageGridItem({
         </div>
       )}
       <div className="p-3 space-y-1">
-        <div className="text-sm font-medium truncate">{page.title || "Untitled"}</div>
+        <div className="text-sm font-medium truncate" dir="auto">{page.title || "Untitled"}</div>
         <div className="text-xs text-muted-foreground font-mono truncate">
           {new URL(page.url).pathname}
         </div>

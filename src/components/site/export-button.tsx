@@ -3,11 +3,12 @@
 import { useState } from "react";
 import { useSiteContext } from "@/context/site-context";
 import { Button } from "@/components/ui/button";
-import { Download, Loader2 } from "lucide-react";
+import { Download, Loader2, Check } from "lucide-react";
 
 export function ExportButton({ rootUrl }: { rootUrl: string }) {
   const { crawlResult } = useSiteContext();
   const [exporting, setExporting] = useState(false);
+  const [exported, setExported] = useState(false);
 
   let domain = "";
   try {
@@ -32,6 +33,10 @@ export function ExportButton({ rootUrl }: { rootUrl: string }) {
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
+
+      // Show "Exported!" feedback
+      setExported(true);
+      setTimeout(() => setExported(false), 2000);
     } catch (err) {
       console.error("PDF export failed:", err);
     } finally {
@@ -45,13 +50,16 @@ export function ExportButton({ rootUrl }: { rootUrl: string }) {
       size="sm"
       onClick={handleExport}
       disabled={exporting || !crawlResult}
+      title={`Export as ${domain}-seo-report.pdf`}
     >
       {exporting ? (
         <Loader2 className="h-4 w-4 animate-spin" />
+      ) : exported ? (
+        <Check className="h-4 w-4 text-emerald-500" />
       ) : (
         <Download className="h-4 w-4" />
       )}
-      Export PDF
+      {exporting ? "Exporting..." : exported ? "Exported!" : "Export PDF"}
     </Button>
   );
 }

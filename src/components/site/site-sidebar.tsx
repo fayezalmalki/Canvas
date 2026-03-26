@@ -203,7 +203,7 @@ export function SiteSidebar({ onNavigate }: { onNavigate?: () => void } = {}) {
                           <ShoppingCart className="h-3 w-3 text-muted-foreground/50 shrink-0" />
                         )}
                         <div className="min-w-0 flex-1">
-                          <div className="truncate text-xs">{product.name}</div>
+                          <div className="truncate text-xs" dir="auto">{product.name}</div>
                           <div className="flex items-center gap-1">
                             {product.price && (
                               <span className="text-[10px] font-mono text-muted-foreground">

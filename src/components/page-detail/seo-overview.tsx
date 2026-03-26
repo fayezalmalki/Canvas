@@ -29,7 +29,7 @@ function MetaRow({
       <div className="w-32 shrink-0 text-xs text-muted-foreground">{label}</div>
       <div className="flex-1 min-w-0">
         {value ? (
-          <span className="text-sm break-words">{value}</span>
+          <span className="text-sm break-words" dir="auto">{value}</span>
         ) : (
           <span className="text-sm text-muted-foreground/50 italic flex items-center gap-1">
             {warning && <AlertTriangle className="h-3 w-3 text-amber-500" />}
@@ -120,7 +120,7 @@ export function SeoOverview({ seo, products }: { seo: PageSeoData; products?: Pr
                   <Badge variant="outline" className="text-[10px] px-1 py-0 font-mono shrink-0">
                     {h.tag}
                   </Badge>
-                  <span className="truncate">{h.text}</span>
+                  <span className="truncate" dir="auto">{h.text}</span>
                 </div>
               );
             })}
@@ -274,9 +274,9 @@ export function SeoOverview({ seo, products }: { seo: PageSeoData; products?: Pr
                       </div>
                     )}
                     <div className="min-w-0 flex-1">
-                      <div className="text-sm font-medium line-clamp-2">{product.name}</div>
+                      <div className="text-sm font-medium line-clamp-2" dir="auto">{product.name}</div>
                       {product.description && (
-                        <p className="text-[11px] text-muted-foreground line-clamp-1 mt-0.5">{product.description}</p>
+                        <p className="text-[11px] text-muted-foreground line-clamp-1 mt-0.5" dir="auto">{product.description}</p>
                       )}
                       {product.price && (
                         <div className="flex items-center gap-2 mt-0.5">
