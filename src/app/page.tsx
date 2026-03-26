@@ -7,6 +7,8 @@ import { api } from "@convex/_generated/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
+import { Badge } from "@/components/ui/badge";
+import { ThemeToggle } from "@/components/theme-toggle";
 import {
   Globe,
   Loader2,
@@ -36,6 +38,7 @@ export default function Home() {
   const [crawledPages, setCrawledPages] = useState<CrawledPage[]>([]);
   const [crawlCount, setCrawlCount] = useState({ current: 0, total: 20, discovered: 0 });
   const [error, setError] = useState("");
+  const [recentExpanded, setRecentExpanded] = useState(false);
   const recentCrawls = useQuery(api.crawls.listRecentCrawls);
 
   async function handleSubmit(e: React.FormEvent) {
@@ -132,15 +135,20 @@ export default function Home() {
       : 0;
 
   return (
-    <div className="flex min-h-full items-center justify-center p-4">
+    <div className="flex min-h-full items-center justify-center p-4 relative">
+      <div className="absolute top-4 right-4">
+        <ThemeToggle />
+      </div>
       <div className="w-full max-w-lg space-y-8">
-        <div className="text-center space-y-2">
-          <div className="flex items-center justify-center gap-2 mb-4">
-            <Globe className="h-8 w-8 text-primary" />
-            <h1 className="text-3xl font-bold tracking-tight">Site Analyzer</h1>
-          </div>
-          <p className="text-muted-foreground">
-            Crawl any website to analyze its SEO, content structure, and features
+        <div className="text-center space-y-3">
+          <h1 className="text-4xl font-bold tracking-tight text-gradient-brand">
+            بصيـــرة
+          </h1>
+          <p className="text-sm font-medium text-muted-foreground tracking-wide uppercase">
+            Baseera
+          </p>
+          <p className="text-muted-foreground text-sm">
+            Crawl any website to analyze its SEO, content, and products
           </p>
         </div>
 
@@ -275,11 +283,24 @@ export default function Home() {
         {/* Recent Sites */}
         {!crawling && recentCrawls && recentCrawls.length > 0 && (
           <div className="space-y-3">
-            <div className="flex items-center gap-2">
+            <button
+              onClick={() => setRecentExpanded(!recentExpanded)}
+              className="flex w-full items-center gap-2 text-left"
+            >
               <Clock className="h-4 w-4 text-muted-foreground" />
               <h2 className="text-sm font-medium">Recent Sites</h2>
-            </div>
-            <div className="space-y-2">
+              <Badge variant="outline" className="text-[10px] px-1.5 py-0 ml-1">
+                {recentCrawls.length}
+              </Badge>
+              <div className="ml-auto">
+                {recentExpanded ? (
+                  <ChevronUp className="h-4 w-4 text-muted-foreground" />
+                ) : (
+                  <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                )}
+              </div>
+            </button>
+            {recentExpanded && <div className="space-y-2">
               {recentCrawls.map((crawl) => {
                 let domain = "";
                 try {
@@ -324,7 +345,7 @@ export default function Home() {
                   </button>
                 );
               })}
-            </div>
+            </div>}
           </div>
         )}
       </div>

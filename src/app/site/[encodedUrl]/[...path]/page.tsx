@@ -10,7 +10,7 @@ import { LinkList } from "@/components/page-detail/link-list";
 import { SerpPreview } from "@/components/page-detail/serp-preview";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Sparkles, ChevronLeft, ChevronRight } from "lucide-react";
+import { Sparkles, ChevronLeft, ChevronRight, Shield } from "lucide-react";
 import { scoreSeo } from "@/lib/seo-scorer";
 
 export default function PageDetail({
@@ -82,6 +82,19 @@ export default function PageDetail({
       <PageHeader page={page} rootUrl={rootUrl} />
       {showImages && (
         <ScreenshotPreview screenshot={page.screenshot} title={page.title} />
+      )}
+
+      {/* Bot protection warning */}
+      {page.botProtection && (
+        <div className="flex items-center gap-3 rounded-lg border border-amber-500/30 bg-amber-500/5 p-4">
+          <Shield className="h-5 w-5 text-amber-500 shrink-0" />
+          <div>
+            <div className="text-sm font-medium text-amber-500">{page.botProtection}</div>
+            <div className="text-xs text-muted-foreground mt-0.5">
+              This page is protected by bot detection. The crawler received a challenge page instead of the actual content. SEO data may be inaccurate.
+            </div>
+          </div>
+        </div>
       )}
 
       {/* SERP Preview */}

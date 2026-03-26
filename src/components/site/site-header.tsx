@@ -9,22 +9,23 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/co
 import { Separator } from "@/components/ui/separator";
 import { SeoChat } from "@/components/site/seo-chat";
 import { ExportButton } from "@/components/site/export-button";
+import { ThemeToggle } from "@/components/theme-toggle";
 import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import {
-  Globe,
   ArrowLeft,
   PanelLeftClose,
   PanelLeft,
   MessageSquare,
   ImageIcon,
   ImageOff,
+  Menu,
 } from "lucide-react";
 
-export function SiteHeader({ rootUrl }: { rootUrl: string }) {
+export function SiteHeader({ rootUrl, onMobileMenuToggle }: { rootUrl: string; onMobileMenuToggle?: () => void }) {
   const router = useRouter();
   const {
     crawlResult,
@@ -48,9 +49,21 @@ export function SiteHeader({ rootUrl }: { rootUrl: string }) {
 
   return (
     <header className="flex h-12 items-center gap-2 border-b border-border bg-card px-3">
+      {/* Mobile hamburger */}
       <Button
         variant="ghost"
         size="icon-sm"
+        className="md:hidden"
+        onClick={onMobileMenuToggle}
+      >
+        <Menu className="h-4 w-4" />
+      </Button>
+
+      {/* Desktop sidebar toggle */}
+      <Button
+        variant="ghost"
+        size="icon-sm"
+        className="hidden md:inline-flex"
         onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
       >
         {sidebarCollapsed ? (
@@ -67,14 +80,14 @@ export function SiteHeader({ rootUrl }: { rootUrl: string }) {
           const encodedRoot = encodeURIComponent(rootUrl);
           router.push(`/site/${encodedRoot}`);
         }}
-        className="flex items-center gap-2 hover:opacity-80 transition-opacity"
+        className="flex items-center gap-2 hover:opacity-80 transition-opacity min-w-0"
       >
-        <Globe className="h-4 w-4 text-muted-foreground" />
-        <span className="font-mono text-sm font-medium">{domain}</span>
+        <span className="text-sm font-bold text-gradient-brand shrink-0">بصيرة</span>
+        <span className="font-mono text-sm font-medium truncate">{domain}</span>
       </button>
 
       {crawlResult && (
-        <span className="text-xs text-muted-foreground">
+        <span className="text-xs text-muted-foreground hidden sm:inline">
           {pageCount} pages
         </span>
       )}
@@ -82,7 +95,7 @@ export function SiteHeader({ rootUrl }: { rootUrl: string }) {
       <div className="ml-auto flex items-center gap-1.5">
         <Tooltip>
           <TooltipTrigger
-            render={<Button variant="ghost" size="icon-sm" />}
+            render={<Button variant="ghost" size="icon-sm" className="hidden sm:inline-flex" />}
             onClick={() => setShowImages(!showImages)}
           >
             {showImages ? (
@@ -96,16 +109,18 @@ export function SiteHeader({ rootUrl }: { rootUrl: string }) {
           </TooltipContent>
         </Tooltip>
 
-        <ExportButton rootUrl={rootUrl} />
+        <span className="hidden sm:inline-flex">
+          <ExportButton rootUrl={rootUrl} />
+        </span>
 
         <Sheet open={chatOpen} onOpenChange={setChatOpen}>
           <SheetTrigger
             render={<Button variant="outline" size="sm" />}
           >
             <MessageSquare className="h-4 w-4" />
-            SEO Advisor
+            <span className="hidden sm:inline">SEO Advisor</span>
           </SheetTrigger>
-          <SheetContent side="right" className="w-[480px] sm:max-w-[480px] p-0 flex flex-col">
+          <SheetContent side="right" className="w-full sm:w-[480px] sm:max-w-[480px] p-0 flex flex-col">
             <SheetHeader className="px-4 py-3 border-b border-border">
               <SheetTitle className="text-sm font-semibold">SEO Advisor</SheetTitle>
             </SheetHeader>
@@ -114,6 +129,8 @@ export function SiteHeader({ rootUrl }: { rootUrl: string }) {
             </div>
           </SheetContent>
         </Sheet>
+
+        <ThemeToggle />
 
         <Button
           variant="ghost"

@@ -13,6 +13,27 @@ import type {
 import { validateStructuredData } from "./schema-validator";
 import { extractProducts } from "./ecommerce-extractor";
 
+const BROWSER_USER_AGENT = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36";
+
+function detectBotProtection(html: string, status: number): string | null {
+  const lower = html.toLowerCase();
+
+  if (lower.includes("vercel security checkpoint")) return "Vercel Security Checkpoint";
+  if (lower.includes("attention required! | cloudflare") || lower.includes("checking if the site connection is secure")) return "Cloudflare Challenge";
+  if (lower.includes("just a moment...") && lower.includes("cloudflare")) return "Cloudflare Challenge";
+  if (lower.includes("please verify you are a human")) return "Bot Verification";
+  if (lower.includes("enable javascript and cookies to continue")) return "JavaScript Challenge";
+  if (lower.includes("access denied") && status === 403) return "Access Denied";
+
+  // Short body with 403 status
+  if (status === 403) {
+    const textLength = html.replace(/<[^>]*>/g, "").trim().length;
+    if (textLength < 500) return "Access Denied";
+  }
+
+  return null;
+}
+
 interface CrawlOptions {
   maxDepth: number;
   maxPages: number;
@@ -72,6 +93,9 @@ export async function crawlSite(
       const htmlSizeBytes = new TextEncoder().encode(html).length;
       const $ = cheerio.load(html);
       const statusCode = res.status;
+
+      // Check for bot protection
+      const botProtection = detectBotProtection(html, statusCode);
 
       // Performance data
       const performance: PagePerformance = {
@@ -208,10 +232,11 @@ export async function crawlSite(
         url: res.url || url,
         title,
         screenshot: "", // no screenshots in serverless mode
-        outgoingLinks: links,
+        outgoingLinks: botProtection ? [] : links,
         seo,
-        bodyText: bodyText.slice(0, 3000),
-        products: products.length > 0 ? products : undefined,
+        bodyText: botProtection ? "" : bodyText.slice(0, 3000),
+        products: !botProtection && products.length > 0 ? products : undefined,
+        botProtection: botProtection || undefined,
       });
 
       onProgress?.({
@@ -284,7 +309,7 @@ export async function crawlSpecificUrls(
         signal: controller.signal,
         headers: {
           "User-Agent":
-            "Mozilla/5.0 (compatible; SiteAnalyzer/1.0; +https://github.com/fayezalmalki/Canvas)",
+            BROWSER_USER_AGENT,
           Accept: "text/html,application/xhtml+xml",
         },
         redirect: "follow",
@@ -300,6 +325,9 @@ export async function crawlSpecificUrls(
       const $ = cheerio.load(html);
       const statusCode = res.status;
       const title = $("title").first().text().trim();
+
+      // Check for bot protection
+      const botProtection = detectBotProtection(html, statusCode);
 
       const performance: PagePerformance = {
         responseTimeMs,
@@ -423,10 +451,11 @@ export async function crawlSpecificUrls(
         url: res.url || url,
         title,
         screenshot: "",
-        outgoingLinks: links,
+        outgoingLinks: botProtection ? [] : links,
         seo,
-        bodyText: bodyText.slice(0, 3000),
-        products: products.length > 0 ? products : undefined,
+        bodyText: botProtection ? "" : bodyText.slice(0, 3000),
+        products: !botProtection && products.length > 0 ? products : undefined,
+        botProtection: botProtection || undefined,
       });
 
       onProgress?.({
@@ -471,7 +500,7 @@ async function fetchWithRedirectTracking(
       signal: controller.signal,
       headers: {
         "User-Agent":
-          "Mozilla/5.0 (compatible; SiteAnalyzer/1.0; +https://github.com/fayezalmalki/Canvas)",
+          BROWSER_USER_AGENT,
         Accept: "text/html,application/xhtml+xml",
       },
       redirect: "manual",
@@ -500,7 +529,7 @@ async function fetchWithRedirectTracking(
     signal: controller.signal,
     headers: {
       "User-Agent":
-        "Mozilla/5.0 (compatible; SiteAnalyzer/1.0; +https://github.com/fayezalmalki/Canvas)",
+        BROWSER_USER_AGENT,
       Accept: "text/html,application/xhtml+xml",
     },
     redirect: "follow",

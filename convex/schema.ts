@@ -115,6 +115,7 @@ export default defineSchema({
         v.literal("og-tags")
       ),
     }))),
+    botProtection: v.optional(v.string()),
   }).index("by_crawl_id", ["crawlId"]),
 
   analyses: defineTable({

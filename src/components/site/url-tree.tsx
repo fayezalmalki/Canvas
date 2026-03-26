@@ -15,13 +15,15 @@ import {
 export function UrlTree({
   node,
   rootUrl,
+  onNavigate,
 }: {
   node: UrlTreeNode;
   rootUrl: string;
+  onNavigate?: () => void;
 }) {
   return (
     <div className="space-y-0.5">
-      <TreeNodeItem node={node} depth={0} rootUrl={rootUrl} defaultOpen />
+      <TreeNodeItem node={node} depth={0} rootUrl={rootUrl} defaultOpen onNavigate={onNavigate} />
     </div>
   );
 }
@@ -31,11 +33,13 @@ function TreeNodeItem({
   depth,
   rootUrl,
   defaultOpen = false,
+  onNavigate,
 }: {
   node: UrlTreeNode;
   depth: number;
   rootUrl: string;
   defaultOpen?: boolean;
+  onNavigate?: () => void;
 }) {
   const [open, setOpen] = useState(defaultOpen || depth < 1);
   const hasChildren = node.children.length > 0;
@@ -57,11 +61,11 @@ function TreeNodeItem({
       const parsed = new URL(node.url);
       const pagePath = parsed.pathname === "/" ? "" : parsed.pathname;
       if (pagePath) {
-        // Remove leading slash for the route param
         router.push(`/site/${encodedRoot}/${pagePath.slice(1)}`);
       } else {
         router.push(`/site/${encodedRoot}`);
       }
+      onNavigate?.();
     }
   }
 
@@ -70,7 +74,7 @@ function TreeNodeItem({
       <button
         className={`flex w-full items-center gap-1 rounded px-1 py-0.5 text-left text-xs transition-colors hover:bg-accent ${
           isActive
-            ? "bg-accent text-foreground"
+            ? "bg-accent text-foreground border-l-2 border-primary"
             : node.crawled
               ? "text-foreground"
               : "text-muted-foreground/50"
@@ -119,6 +123,7 @@ function TreeNodeItem({
             node={child}
             depth={depth + 1}
             rootUrl={rootUrl}
+            onNavigate={onNavigate}
           />
         ))}
     </div>

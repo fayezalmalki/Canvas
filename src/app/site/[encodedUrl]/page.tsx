@@ -33,6 +33,7 @@ import {
   Gauge,
   ShoppingCart,
   ArrowUpDown,
+  Shield,
 } from "lucide-react";
 import type { CrawlPageResult } from "@/types/canvas";
 import { scoreSeo } from "@/lib/seo-scorer";
@@ -567,12 +568,18 @@ function PageListItem({ page, onClick, sortMode }: { page: CrawlPageResult; onCl
               {lang}
             </Badge>
           )}
+          {page.botProtection && (
+            <Badge variant="outline" className="text-[10px] px-1 py-0 shrink-0 text-amber-500 border-amber-500/30">
+              <Shield className="h-2.5 w-2.5 mr-0.5" />
+              {page.botProtection}
+            </Badge>
+          )}
         </div>
         <div className="text-xs text-muted-foreground font-mono truncate">
           {pathname}
         </div>
         {/* Mini summary */}
-        <div className="flex items-center gap-3 text-[11px] text-muted-foreground flex-wrap">
+        {!page.botProtection && <div className="flex items-center gap-3 text-[11px] text-muted-foreground flex-wrap">
           <span>{wordCount} words</span>
           <span>{page.seo.internalLinkCount} links</span>
           <span>{page.seo.imageCount} imgs</span>
@@ -586,7 +593,7 @@ function PageListItem({ page, onClick, sortMode }: { page: CrawlPageResult; onCl
               H1: {page.seo.headings.find(h => h.tag === "h1")?.text}
             </span>
           )}
-        </div>
+        </div>}
         {/* Issue badges */}
         <div className="flex gap-1.5">
           {!hasDesc && (

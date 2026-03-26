@@ -99,6 +99,7 @@ const pageValidator = v.object({
   outgoingLinks: v.array(outgoingLinkValidator),
   seo: seoValidator,
   products: v.optional(v.array(productValidator)),
+  botProtection: v.optional(v.string()),
 });
 
 export const storeCrawlResult = mutation({
@@ -138,6 +139,7 @@ export const storeCrawlResult = mutation({
         outgoingLinks: page.outgoingLinks,
         seo: page.seo,
         products: page.products,
+        botProtection: page.botProtection,
       });
     }
 
@@ -176,6 +178,7 @@ export const getCrawlByUrl = query({
         outgoingLinks: p.outgoingLinks,
         seo: p.seo,
         products: p.products,
+        botProtection: p.botProtection,
       })),
     };
   },

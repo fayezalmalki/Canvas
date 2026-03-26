@@ -87,6 +87,7 @@ export interface CrawlPageResult {
   seo: PageSeoData;
   bodyText: string; // first ~3000 chars for LLM analysis
   products?: ProductData[];
+  botProtection?: string;
 }
 
 export interface BrokenLink {
