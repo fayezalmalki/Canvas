@@ -120,8 +120,23 @@ export const storeCrawlResult = mutation({
     }))),
   },
   handler: async (ctx, args) => {
+    // Generate a short unique slug (8 chars, alphanumeric)
+    const chars = "abcdefghijklmnopqrstuvwxyz0123456789";
+    let slug: string;
+    let attempts = 0;
+    do {
+      slug = Array.from({ length: 8 }, () => chars[Math.floor(Math.random() * chars.length)]).join("");
+      const existing = await ctx.db
+        .query("crawls")
+        .withIndex("by_slug", (q) => q.eq("slug", slug))
+        .first();
+      if (!existing) break;
+      attempts++;
+    } while (attempts < 5);
+
     const crawlId = await ctx.db.insert("crawls", {
       rootUrl: args.rootUrl,
+      slug,
       pagesCount: args.pages.length,
       discoveredUrls: args.discoveredUrls ?? [],
       brokenLinks: args.brokenLinks,
@@ -143,14 +158,31 @@ export const storeCrawlResult = mutation({
       });
     }
 
-    return crawlId;
+    return slug;
   },
 });
 
-export const getCrawlById = query({
-  args: { id: v.id("crawls") },
+export const getCrawlBySlug = query({
+  args: { slug: v.string() },
   handler: async (ctx, args) => {
-    const crawl = await ctx.db.get(args.id);
+    // Try slug first
+    let crawl = await ctx.db
+      .query("crawls")
+      .withIndex("by_slug", (q) => q.eq("slug", args.slug))
+      .first();
+
+    // Fallback: try as Convex _id for backward compat with old URLs
+    if (!crawl) {
+      try {
+        const doc = await ctx.db.get(args.slug as any) as any;
+        if (doc && "rootUrl" in doc && "pagesCount" in doc) {
+          crawl = doc;
+        }
+      } catch {
+        // Invalid ID format — not found
+      }
+    }
+
     if (!crawl) return null;
 
     const pages = await ctx.db
@@ -160,6 +192,7 @@ export const getCrawlById = query({
 
     return {
       _id: crawl._id,
+      slug: crawl.slug ?? args.slug,
       rootUrl: crawl.rootUrl,
       discoveredUrls: crawl.discoveredUrls ?? [],
       brokenLinks: crawl.brokenLinks ?? [],
@@ -312,6 +345,7 @@ export const listRecentCrawls = query({
         seen.add(crawl.rootUrl);
         unique.push({
           _id: crawl._id,
+          slug: crawl.slug,
           rootUrl: crawl.rootUrl,
           pagesCount: crawl.pagesCount,
           discoveredCount: (crawl.discoveredUrls ?? []).length,

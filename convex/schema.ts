@@ -4,6 +4,7 @@ import { v } from "convex/values";
 export default defineSchema({
   crawls: defineTable({
     rootUrl: v.string(),
+    slug: v.optional(v.string()),
     pagesCount: v.number(),
     discoveredUrls: v.optional(v.array(v.string())),
     brokenLinks: v.optional(v.array(v.object({
@@ -18,7 +19,8 @@ export default defineSchema({
       statusCodes: v.array(v.number()),
     }))),
     createdAt: v.number(),
-  }).index("by_root_url", ["rootUrl"]),
+  }).index("by_root_url", ["rootUrl"])
+    .index("by_slug", ["slug"]),
 
   pages: defineTable({
     crawlId: v.id("crawls"),

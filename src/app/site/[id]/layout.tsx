@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 import { useQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
-import type { Id } from "@convex/_generated/dataModel";
 import { SiteProvider } from "@/context/site-context";
 import { SiteHeader } from "@/components/site/site-header";
 import { SiteSidebar } from "@/components/site/site-sidebar";
@@ -50,22 +49,23 @@ export default function SiteLayout({
   params: Promise<{ id: string }>;
   children: React.ReactNode;
 }) {
-  const { id } = use(params);
+  const { id: slug } = use(params);
   const router = useRouter();
 
-  // Validate ID format before querying — Convex IDs are alphanumeric, 32 chars
-  const isValidId = /^[a-z0-9]{20,}$/i.test(id);
+  // Accept slugs (8 chars) or legacy Convex IDs (32 chars) — both alphanumeric
+  const isValidId = /^[a-z0-9]{4,}$/i.test(slug);
   const crawlData = useQuery(
-    api.crawls.getCrawlById,
-    isValidId ? { id: id as Id<"crawls"> } : "skip"
+    api.crawls.getCrawlBySlug,
+    isValidId ? { slug } : "skip"
   );
 
   // Redirect to home if no data found or invalid ID
   useEffect(() => {
     if (crawlData === null || !isValidId) {
+      console.warn("[Baseera] Crawl not found for slug:", slug, { isValidId, crawlData });
       router.replace("/");
     }
-  }, [crawlData, isValidId, router]);
+  }, [crawlData, isValidId, slug, router]);
 
   // Detect if site is primarily Arabic
   const isArabicSite = useMemo(() => {
@@ -88,7 +88,7 @@ export default function SiteLayout({
 
   return (
     <SiteProvider
-      crawlId={id}
+      crawlId={slug}
       initialData={crawlData}
       initialDiscoveredUrls={crawlData.discoveredUrls}
       isArabicSite={isArabicSite}
