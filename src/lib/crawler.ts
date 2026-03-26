@@ -35,15 +35,16 @@ function detectBotProtection(html: string, status: number): string | null {
 }
 
 /**
- * Capture a screenshot of a URL using microlink API.
- * Returns a base64 data URL or "" on failure.
+ * Capture a screenshot URL using microlink API.
+ * Returns a URL string (not base64) or "" on failure.
  */
 async function captureScreenshot(url: string): Promise<string> {
   try {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 8000);
 
-    const apiUrl = `https://api.microlink.io/?url=${encodeURIComponent(url)}&screenshot=true&meta=false&embed=screenshot.url`;
+    // Use microlink API without embed to get the screenshot URL
+    const apiUrl = `https://api.microlink.io/?url=${encodeURIComponent(url)}&screenshot=true&meta=false`;
     const res = await fetch(apiUrl, {
       signal: controller.signal,
       headers: { "User-Agent": BROWSER_USER_AGENT },
@@ -52,27 +53,9 @@ async function captureScreenshot(url: string): Promise<string> {
 
     if (!res.ok) return "";
 
-    // The embed=screenshot.url makes microlink return the image directly
-    const contentType = res.headers.get("content-type") || "";
-    if (contentType.startsWith("image/")) {
-      const buffer = await res.arrayBuffer();
-      const base64 = Buffer.from(buffer).toString("base64");
-      return `data:${contentType};base64,${base64}`;
-    }
-
-    // Fallback: parse JSON response
     const data = await res.json();
     const screenshotUrl = data?.data?.screenshot?.url;
-    if (!screenshotUrl) return "";
-
-    const imgRes = await fetch(screenshotUrl, {
-      signal: AbortSignal.timeout(5000),
-    });
-    if (!imgRes.ok) return "";
-    const imgBuffer = await imgRes.arrayBuffer();
-    const imgType = imgRes.headers.get("content-type") || "image/png";
-    const imgBase64 = Buffer.from(imgBuffer).toString("base64");
-    return `data:${imgType};base64,${imgBase64}`;
+    return screenshotUrl || "";
   } catch {
     return "";
   }
