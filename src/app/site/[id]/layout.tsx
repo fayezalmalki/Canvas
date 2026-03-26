@@ -53,14 +53,19 @@ export default function SiteLayout({
   const { id } = use(params);
   const router = useRouter();
 
-  const crawlData = useQuery(api.crawls.getCrawlById, { id: id as Id<"crawls"> });
+  // Validate ID format before querying — Convex IDs are alphanumeric, 32 chars
+  const isValidId = /^[a-z0-9]{20,}$/i.test(id);
+  const crawlData = useQuery(
+    api.crawls.getCrawlById,
+    isValidId ? { id: id as Id<"crawls"> } : "skip"
+  );
 
-  // Redirect to home if no data found
+  // Redirect to home if no data found or invalid ID
   useEffect(() => {
-    if (crawlData === null) {
+    if (crawlData === null || !isValidId) {
       router.replace("/");
     }
-  }, [crawlData, router]);
+  }, [crawlData, isValidId, router]);
 
   // Detect if site is primarily Arabic
   const isArabicSite = useMemo(() => {
