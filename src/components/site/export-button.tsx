@@ -7,8 +7,8 @@ import { Button } from "@/components/ui/button";
 import { Download, Loader2, Check } from "lucide-react";
 
 export function ExportButton({ rootUrl }: { rootUrl: string }) {
-  const { crawlResult } = useSiteContext();
-  const { t } = useLocale();
+  const { crawlId, crawlResult } = useSiteContext();
+  const { t, locale } = useLocale();
   const [exporting, setExporting] = useState(false);
   const [exported, setExported] = useState(false);
 
@@ -24,8 +24,13 @@ export function ExportButton({ rootUrl }: { rootUrl: string }) {
     setExporting(true);
 
     try {
-      const { generatePdf } = await import("@/lib/pdf-export");
-      const blob = await generatePdf(crawlResult);
+      const res = await fetch("/api/export-pdf", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ slug: crawlId, locale }),
+      });
+      if (!res.ok) throw new Error(`PDF export failed: ${res.status}`);
+      const blob = await res.blob();
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
