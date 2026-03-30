@@ -8,6 +8,7 @@ interface SiteContextValue {
   crawlResult: CrawlResult | null;
   setCrawlResult: (r: CrawlResult | null) => void;
   discoveredUrls: string[];
+  setDiscoveredUrls: (urls: string[]) => void;
   isArabicSite: boolean;
   // In-memory cache for current session (Convex handles persistence)
   analysisCache: Map<string, PageAnalysis>;
@@ -35,6 +36,7 @@ export function SiteProvider({
   children: ReactNode;
 }) {
   const [crawlResult, setCrawlResult] = useState<CrawlResult | null>(initialData);
+  const [discoveredUrls, setDiscoveredUrls] = useState<string[]>(initialDiscoveredUrls ?? []);
   const [analysisCache] = useState(() => new Map<string, PageAnalysis>());
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [showImages, setShowImages] = useState(true);
@@ -56,7 +58,8 @@ export function SiteProvider({
       crawlId,
       crawlResult,
       setCrawlResult,
-      discoveredUrls: initialDiscoveredUrls ?? [],
+      discoveredUrls,
+      setDiscoveredUrls,
       isArabicSite,
       analysisCache,
       setAnalysis,

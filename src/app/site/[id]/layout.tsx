@@ -9,6 +9,7 @@ import { SiteProvider } from "@/context/site-context";
 import { SiteHeader } from "@/components/site/site-header";
 import { SiteSidebar } from "@/components/site/site-sidebar";
 import { useSiteContext } from "@/context/site-context";
+import { useLocale } from "@/context/locale-context";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { Loader2 } from "lucide-react";
 
@@ -17,22 +18,23 @@ function SiteLayoutInner({
 }: {
   children: React.ReactNode;
 }) {
-  const { sidebarCollapsed, isArabicSite } = useSiteContext();
+  const { sidebarCollapsed } = useSiteContext();
+  const { isRtl } = useLocale();
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
 
   return (
-    <div className="flex h-full flex-col" dir={isArabicSite ? "rtl" : "ltr"}>
+    <div className="flex h-full flex-col">
       <SiteHeader onMobileMenuToggle={() => setMobileSidebarOpen(true)} />
       <div className="flex flex-1 overflow-hidden">
         {/* Desktop sidebar */}
         {!sidebarCollapsed && (
-          <div className={`hidden md:block w-[260px] shrink-0 ${isArabicSite ? "order-last" : ""}`}>
+          <div className={`hidden md:block w-[260px] shrink-0 ${isRtl ? "order-last" : ""}`}>
             <SiteSidebar />
           </div>
         )}
         {/* Mobile sidebar as Sheet */}
         <Sheet open={mobileSidebarOpen} onOpenChange={setMobileSidebarOpen}>
-          <SheetContent side={isArabicSite ? "right" : "left"} className="w-[280px] p-0">
+          <SheetContent side={isRtl ? "right" : "left"} className="w-[280px] p-0">
             <SiteSidebar onNavigate={() => setMobileSidebarOpen(false)} />
           </SheetContent>
         </Sheet>

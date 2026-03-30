@@ -54,7 +54,7 @@ export default function SiteOverview({
   params: Promise<{ id: string }>;
 }) {
   const { id } = use(params);
-  const { crawlId, crawlResult, showImages, discoveredUrls, setCrawlResult } = useSiteContext();
+  const { crawlId, crawlResult, showImages, discoveredUrls, setCrawlResult, setDiscoveredUrls } = useSiteContext();
   const { t } = useLocale();
   const rootUrl = crawlResult?.rootUrl ?? "";
   const router = useRouter();
@@ -247,13 +247,20 @@ export default function SiteOverview({
               const allPages = [...crawlResult!.pages, ...newPages];
               const remainingDiscovered = event.result.discoveredUrls ?? [];
 
+              // Update UI state immediately
+              setCrawlResult({
+                ...crawlResult!,
+                pages: allPages,
+                discoveredUrls: remainingDiscovered,
+              });
+              setDiscoveredUrls(remainingDiscovered);
+
+              // Persist to database
               await storeCrawl({
                 rootUrl,
                 pages: allPages,
                 discoveredUrls: remainingDiscovered,
               });
-
-              window.location.reload();
               return;
             }
           } catch {

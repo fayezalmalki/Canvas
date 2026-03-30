@@ -205,11 +205,9 @@ export function generatePdfHtml(data: CrawlResult, locale: Locale): string {
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <style>
-  @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;700&display=swap');
-
   * { margin: 0; padding: 0; box-sizing: border-box; }
   body {
-    font-family: 'IBM Plex Sans Arabic', 'Segoe UI', sans-serif;
+    font-family: 'Segoe UI', 'Helvetica Neue', Arial, 'Noto Sans Arabic', 'Tahoma', sans-serif;
     font-size: 10px;
     color: #18181b;
     background: #fff;
