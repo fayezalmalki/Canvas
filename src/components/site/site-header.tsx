@@ -3,6 +3,7 @@
 import { useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { useSiteContext } from "@/context/site-context";
+import { useLocale } from "@/context/locale-context";
 import { deduplicatePages } from "@/lib/dedup-pages";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
@@ -19,16 +20,20 @@ import {
   Home,
   PanelLeftClose,
   PanelLeft,
+  PanelRightClose,
+  PanelRight,
   MessageSquare,
   ImageIcon,
   ImageOff,
   Menu,
   Share2,
   Check,
+  Languages,
 } from "lucide-react";
 
 export function SiteHeader({ onMobileMenuToggle }: { onMobileMenuToggle?: () => void }) {
   const router = useRouter();
+  const { locale, setLocale, t, isRtl } = useLocale();
   const {
     crawlId,
     crawlResult,
@@ -62,8 +67,12 @@ export function SiteHeader({ onMobileMenuToggle }: { onMobileMenuToggle?: () => 
     }
   }
 
+  // Use RTL-aware sidebar icons
+  const SidebarCollapseIcon = isRtl ? PanelRightClose : PanelLeftClose;
+  const SidebarExpandIcon = isRtl ? PanelRight : PanelLeft;
+
   return (
-    <header className="flex h-12 items-center gap-2 border-b border-border bg-card px-3" dir="ltr">
+    <header className="flex h-12 items-center gap-2 border-b border-border bg-card px-3">
       {/* Mobile hamburger */}
       <Button
         variant="ghost"
@@ -82,9 +91,9 @@ export function SiteHeader({ onMobileMenuToggle }: { onMobileMenuToggle?: () => 
         onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
       >
         {sidebarCollapsed ? (
-          <PanelLeft className="h-4 w-4" />
+          <SidebarExpandIcon className="h-4 w-4" />
         ) : (
-          <PanelLeftClose className="h-4 w-4" />
+          <SidebarCollapseIcon className="h-4 w-4" />
         )}
       </Button>
 
@@ -98,7 +107,7 @@ export function SiteHeader({ onMobileMenuToggle }: { onMobileMenuToggle?: () => 
         >
           <Home className="h-4 w-4" />
         </TooltipTrigger>
-        <TooltipContent>Back to Home</TooltipContent>
+        <TooltipContent>{t("header.backToHome")}</TooltipContent>
       </Tooltip>
 
       <button
@@ -111,11 +120,24 @@ export function SiteHeader({ onMobileMenuToggle }: { onMobileMenuToggle?: () => 
 
       {crawlResult && (
         <span className="text-xs text-muted-foreground hidden sm:inline">
-          {pageCount} pages
+          {pageCount} {t("header.pages")}
         </span>
       )}
 
-      <div className="ml-auto flex items-center gap-1.5">
+      <div className="ms-auto flex items-center gap-1.5">
+        {/* Language Toggle */}
+        <Tooltip>
+          <TooltipTrigger
+            render={<Button variant="ghost" size="icon-sm" />}
+            onClick={() => setLocale(locale === "en" ? "ar" : "en")}
+          >
+            <Languages className="h-4 w-4" />
+          </TooltipTrigger>
+          <TooltipContent>
+            {locale === "en" ? "العربية" : "English"}
+          </TooltipContent>
+        </Tooltip>
+
         {/* Share/Copy Link */}
         <Tooltip>
           <TooltipTrigger
@@ -129,7 +151,7 @@ export function SiteHeader({ onMobileMenuToggle }: { onMobileMenuToggle?: () => 
             )}
           </TooltipTrigger>
           <TooltipContent>
-            {copied ? "Copied!" : "Copy link"}
+            {copied ? t("header.copied") : t("header.copyLink")}
           </TooltipContent>
         </Tooltip>
 
@@ -145,7 +167,7 @@ export function SiteHeader({ onMobileMenuToggle }: { onMobileMenuToggle?: () => 
             )}
           </TooltipTrigger>
           <TooltipContent>
-            {showImages ? "Hide images" : "Show images"}
+            {showImages ? t("header.hideImages") : t("header.showImages")}
           </TooltipContent>
         </Tooltip>
 
@@ -158,11 +180,11 @@ export function SiteHeader({ onMobileMenuToggle }: { onMobileMenuToggle?: () => 
             render={<Button variant="outline" size="sm" />}
           >
             <MessageSquare className="h-4 w-4" />
-            <span className="hidden sm:inline">SEO Advisor</span>
+            <span className="hidden sm:inline">{t("header.seoAdvisor")}</span>
           </SheetTrigger>
-          <SheetContent side="right" className="w-full sm:w-[480px] sm:max-w-[480px] p-0 flex flex-col">
+          <SheetContent side={isRtl ? "left" : "right"} className="w-full sm:w-[480px] sm:max-w-[480px] p-0 flex flex-col">
             <SheetHeader className="px-4 py-3 border-b border-border">
-              <SheetTitle className="text-sm font-semibold">SEO Advisor</SheetTitle>
+              <SheetTitle className="text-sm font-semibold">{t("header.seoAdvisor")}</SheetTitle>
             </SheetHeader>
             <div className="flex-1 overflow-hidden">
               <SeoChat />

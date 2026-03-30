@@ -1,6 +1,7 @@
 "use client";
 
 import type { OutgoingLink } from "@/types/canvas";
+import { useLocale } from "@/context/locale-context";
 import { Badge } from "@/components/ui/badge";
 import { ExternalLink } from "lucide-react";
 
@@ -13,9 +14,11 @@ const contextColors: Record<string, string> = {
 };
 
 export function LinkList({ links }: { links: OutgoingLink[] }) {
+  const { t } = useLocale();
+
   if (links.length === 0) {
     return (
-      <p className="text-sm text-muted-foreground">No outgoing links found</p>
+      <p className="text-sm text-muted-foreground">{t("links.noOutgoing")}</p>
     );
   }
 
@@ -41,10 +44,10 @@ export function LinkList({ links }: { links: OutgoingLink[] }) {
               variant="outline"
               className={`text-[10px] px-1.5 py-0 ${contextColors[context] || ""}`}
             >
-              {context}
+              {t(`links.${context}`)}
             </Badge>
             <span className="text-xs text-muted-foreground">
-              {contextLinks.length} links
+              {contextLinks.length} {t("page.linksLabel")}
             </span>
           </div>
           <div className="rounded-lg border border-border bg-card divide-y divide-border">

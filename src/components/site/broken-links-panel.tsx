@@ -1,6 +1,7 @@
 "use client";
 
 import type { BrokenLink, RedirectChain } from "@/types/canvas";
+import { useLocale } from "@/context/locale-context";
 import { Badge } from "@/components/ui/badge";
 import { AlertTriangle, ArrowRight, Link2Off } from "lucide-react";
 
@@ -10,11 +11,13 @@ interface BrokenLinksPanelProps {
 }
 
 export function BrokenLinksPanel({ brokenLinks, redirectChains }: BrokenLinksPanelProps) {
+  const { t } = useLocale();
+
   if (brokenLinks.length === 0 && redirectChains.length === 0) {
     return (
       <div className="rounded-lg border border-border bg-card p-6 text-center">
         <Link2Off className="mx-auto mb-2 h-6 w-6 text-muted-foreground/40" />
-        <p className="text-sm text-muted-foreground">No broken links or redirect chains found</p>
+        <p className="text-sm text-muted-foreground">{t("broken.noIssues")}</p>
       </div>
     );
   }
@@ -34,7 +37,7 @@ export function BrokenLinksPanel({ brokenLinks, redirectChains }: BrokenLinksPan
           <div className="flex items-center gap-2 mb-3">
             <AlertTriangle className="h-4 w-4 text-red-500" />
             <h3 className="text-sm font-medium">
-              Broken Links ({sortedBroken.length})
+              {t("broken.brokenLinks")} ({sortedBroken.length})
             </h3>
           </div>
           <div className="rounded-lg border border-border bg-card divide-y divide-border">
@@ -57,7 +60,7 @@ export function BrokenLinksPanel({ brokenLinks, redirectChains }: BrokenLinksPan
                 </div>
                 {link.referringPages.length > 0 && (
                   <div className="text-[11px] text-muted-foreground">
-                    Linked from:{" "}
+                    {t("broken.linkedFrom")}{" "}
                     {link.referringPages.slice(0, 3).map((ref) => shortUrl(ref)).join(", ")}
                     {link.referringPages.length > 3 && ` +${link.referringPages.length - 3} more`}
                   </div>
@@ -74,7 +77,7 @@ export function BrokenLinksPanel({ brokenLinks, redirectChains }: BrokenLinksPan
           <div className="flex items-center gap-2 mb-3">
             <ArrowRight className="h-4 w-4 text-amber-500" />
             <h3 className="text-sm font-medium">
-              Redirect Chains ({redirectChains.length})
+              {t("broken.redirectChains")} ({redirectChains.length})
             </h3>
           </div>
           <div className="rounded-lg border border-border bg-card divide-y divide-border">
@@ -100,8 +103,8 @@ export function BrokenLinksPanel({ brokenLinks, redirectChains }: BrokenLinksPan
                   </span>
                 </div>
                 <div className="text-[11px] text-muted-foreground">
-                  {chain.hops} hop{chain.hops > 1 ? "s" : ""}
-                  {chain.hops > 1 && " — consider reducing to a single redirect"}
+                  {chain.hops} {t("broken.hops")}
+                  {chain.hops > 1 && ` — ${t("broken.reduceRedirect")}`}
                 </div>
               </div>
             ))}

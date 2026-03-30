@@ -2,6 +2,7 @@
 
 import { useMemo } from "react";
 import type { CrawlPageResult } from "@/types/canvas";
+import { useLocale } from "@/context/locale-context";
 import { analyzeContent } from "@/lib/content-analysis";
 import { Badge } from "@/components/ui/badge";
 import { FileText, Copy, FileWarning, Layers } from "lucide-react";
@@ -11,6 +12,7 @@ interface ContentIssuesPanelProps {
 }
 
 export function ContentIssuesPanel({ pages }: ContentIssuesPanelProps) {
+  const { t } = useLocale();
   const analysis = useMemo(() => analyzeContent(pages), [pages]);
 
   const totalIssues =
@@ -23,7 +25,7 @@ export function ContentIssuesPanel({ pages }: ContentIssuesPanelProps) {
     return (
       <div className="rounded-lg border border-border bg-card p-6 text-center">
         <FileText className="mx-auto mb-2 h-6 w-6 text-muted-foreground/40" />
-        <p className="text-sm text-muted-foreground">No content issues detected</p>
+        <p className="text-sm text-muted-foreground">{t("content.noIssues")}</p>
       </div>
     );
   }
@@ -36,9 +38,9 @@ export function ContentIssuesPanel({ pages }: ContentIssuesPanelProps) {
           <div className="flex items-center gap-2 mb-3">
             <FileWarning className="h-4 w-4 text-amber-500" />
             <h3 className="text-sm font-medium">
-              Thin Pages ({analysis.thinPages.length})
+              {t("content.thinPages")} ({analysis.thinPages.length})
             </h3>
-            <span className="text-[11px] text-muted-foreground">Under 100 words</span>
+            <span className="text-[11px] text-muted-foreground">{t("content.under100")}</span>
           </div>
           <div className="rounded-lg border border-border bg-card divide-y divide-border">
             {analysis.thinPages.map((p) => (
@@ -47,7 +49,7 @@ export function ContentIssuesPanel({ pages }: ContentIssuesPanelProps) {
                   {p.wordCount}w
                 </Badge>
                 <div className="min-w-0">
-                  <div className="text-sm truncate">{p.title || "Untitled"}</div>
+                  <div className="text-sm truncate">{p.title || t("page.untitled")}</div>
                   <div className="text-[11px] text-muted-foreground font-mono truncate">
                     {shortUrl(p.url)}
                   </div>
@@ -64,7 +66,7 @@ export function ContentIssuesPanel({ pages }: ContentIssuesPanelProps) {
           <div className="flex items-center gap-2 mb-3">
             <Copy className="h-4 w-4 text-amber-500" />
             <h3 className="text-sm font-medium">
-              Duplicate Titles ({analysis.duplicateTitles.length} groups)
+              {t("content.duplicateTitles")} ({analysis.duplicateTitles.length})
             </h3>
           </div>
           <div className="rounded-lg border border-border bg-card divide-y divide-border">
@@ -90,7 +92,7 @@ export function ContentIssuesPanel({ pages }: ContentIssuesPanelProps) {
           <div className="flex items-center gap-2 mb-3">
             <Copy className="h-4 w-4 text-amber-500" />
             <h3 className="text-sm font-medium">
-              Duplicate Descriptions ({analysis.duplicateDescriptions.length} groups)
+              {t("content.duplicateDescriptions")} ({analysis.duplicateDescriptions.length})
             </h3>
           </div>
           <div className="rounded-lg border border-border bg-card divide-y divide-border">
@@ -118,7 +120,7 @@ export function ContentIssuesPanel({ pages }: ContentIssuesPanelProps) {
           <div className="flex items-center gap-2 mb-3">
             <Layers className="h-4 w-4 text-amber-500" />
             <h3 className="text-sm font-medium">
-              Similar Content ({analysis.similarContent.length} pairs)
+              {t("content.similarContent")} ({analysis.similarContent.length})
             </h3>
           </div>
           <div className="rounded-lg border border-border bg-card divide-y divide-border">
@@ -126,7 +128,7 @@ export function ContentIssuesPanel({ pages }: ContentIssuesPanelProps) {
               <div key={i} className="p-3 space-y-1">
                 <div className="flex items-center gap-2">
                   <Badge variant="outline" className="text-[10px] px-1.5 py-0 font-mono text-amber-500 border-amber-500/30">
-                    {pair.similarity}% similar
+                    {pair.similarity}{t("content.similar")}
                   </Badge>
                 </div>
                 <div className="text-[11px] text-muted-foreground font-mono truncate">

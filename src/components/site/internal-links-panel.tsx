@@ -2,6 +2,7 @@
 
 import { useState, useMemo } from "react";
 import type { CrawlPageResult } from "@/types/canvas";
+import { useLocale } from "@/context/locale-context";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Link, Search, AlertTriangle } from "lucide-react";
@@ -19,6 +20,7 @@ interface InternalLinkEntry {
 }
 
 export function InternalLinksPanel({ pages }: InternalLinksPanelProps) {
+  const { t } = useLocale();
   const [search, setSearch] = useState("");
 
   const { entries, uniqueTargets, avgLinksPerPage, orphanPages, siteOrigin } = useMemo(() => {
@@ -50,7 +52,7 @@ export function InternalLinksPanel({ pages }: InternalLinksPanelProps) {
         targetSet.add(link.url);
         allEntries.push({
           sourceUrl: page.url,
-          sourceTitle: page.title || "Untitled",
+          sourceTitle: page.title || t("page.untitled"),
           targetUrl: link.url,
           anchorText: link.anchorText || "(no anchor text)",
           context: link.context,
@@ -72,7 +74,7 @@ export function InternalLinksPanel({ pages }: InternalLinksPanelProps) {
       orphanPages: orphans,
       siteOrigin: origin,
     };
-  }, [pages]);
+  }, [pages, t]);
 
   const filtered = useMemo(() => {
     if (!search) return entries;
@@ -114,15 +116,15 @@ export function InternalLinksPanel({ pages }: InternalLinksPanelProps) {
       <div className="grid grid-cols-3 gap-3">
         <div className="rounded-lg border border-border bg-card p-3 text-center">
           <div className="text-lg font-semibold">{uniqueTargets}</div>
-          <div className="text-[11px] text-muted-foreground">Unique Targets</div>
+          <div className="text-[11px] text-muted-foreground">{t("internal.uniqueTargets")}</div>
         </div>
         <div className="rounded-lg border border-border bg-card p-3 text-center">
           <div className="text-lg font-semibold">{avgLinksPerPage}</div>
-          <div className="text-[11px] text-muted-foreground">Avg Links/Page</div>
+          <div className="text-[11px] text-muted-foreground">{t("internal.avgPerPage")}</div>
         </div>
         <div className="rounded-lg border border-border bg-card p-3 text-center">
           <div className="text-lg font-semibold text-amber-500">{orphanPages.length}</div>
-          <div className="text-[11px] text-muted-foreground">Orphan Pages</div>
+          <div className="text-[11px] text-muted-foreground">{t("internal.orphanPages")}</div>
         </div>
       </div>
 
@@ -131,13 +133,12 @@ export function InternalLinksPanel({ pages }: InternalLinksPanelProps) {
         <div>
           <div className="flex items-center gap-2 mb-2">
             <AlertTriangle className="h-4 w-4 text-amber-500" />
-            <h3 className="text-sm font-medium">Orphan Pages</h3>
-            <span className="text-[11px] text-muted-foreground">No internal links point to these</span>
+            <h3 className="text-sm font-medium">{t("internal.orphanPages")}</h3>
           </div>
           <div className="rounded-lg border border-border bg-card divide-y divide-border">
             {orphanPages.slice(0, 10).map((p) => (
               <div key={p.url} className="p-2.5">
-                <div className="text-sm truncate">{p.title || "Untitled"}</div>
+                <div className="text-sm truncate">{p.title || t("page.untitled")}</div>
                 <div className="text-[11px] text-muted-foreground font-mono truncate">
                   {shortUrl(p.url)}
                 </div>
@@ -145,7 +146,7 @@ export function InternalLinksPanel({ pages }: InternalLinksPanelProps) {
             ))}
             {orphanPages.length > 10 && (
               <div className="p-2.5 text-[11px] text-muted-foreground text-center">
-                +{orphanPages.length - 10} more orphan pages
+                +{orphanPages.length - 10} more
               </div>
             )}
           </div>
@@ -154,12 +155,12 @@ export function InternalLinksPanel({ pages }: InternalLinksPanelProps) {
 
       {/* Search */}
       <div className="relative">
-        <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+        <Search className="absolute start-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
         <Input
-          placeholder="Filter by URL or anchor text..."
+          placeholder={t("internal.searchPlaceholder")}
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          className="pl-8 h-8 text-xs"
+          className="ps-8 h-8 text-xs"
         />
       </div>
 

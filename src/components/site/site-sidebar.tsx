@@ -3,6 +3,7 @@
 import { useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { useSiteContext } from "@/context/site-context";
+import { useLocale } from "@/context/locale-context";
 import { sitePageUrl } from "@/lib/navigation";
 import { buildUrlTree, filterTree } from "@/lib/url-tree";
 import { deduplicatePages } from "@/lib/dedup-pages";
@@ -22,6 +23,7 @@ interface ProductWithPage extends ProductData {
 
 export function SiteSidebar({ onNavigate }: { onNavigate?: () => void } = {}) {
   const { crawlId, crawlResult } = useSiteContext();
+  const { t } = useLocale();
   const [search, setSearch] = useState("");
   const [tab, setTab] = useState<SidebarTab>("pages");
   const router = useRouter();
@@ -109,7 +111,7 @@ export function SiteSidebar({ onNavigate }: { onNavigate?: () => void } = {}) {
               }`}
             >
               <FileText className="h-3 w-3" />
-              Pages
+              {t("sidebar.pages")}
             </button>
             <button
               onClick={() => setTab("products")}
@@ -120,7 +122,7 @@ export function SiteSidebar({ onNavigate }: { onNavigate?: () => void } = {}) {
               }`}
             >
               <ShoppingCart className="h-3 w-3" />
-              Products
+              {t("sidebar.products")}
               <Badge variant="outline" className="text-[9px] px-1 py-0 ml-0.5">
                 {allProducts.length}
               </Badge>
@@ -128,7 +130,7 @@ export function SiteSidebar({ onNavigate }: { onNavigate?: () => void } = {}) {
           </div>
         ) : (
           <div className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
-            Sitemap
+            {t("sidebar.sitemap")}
           </div>
         )}
 

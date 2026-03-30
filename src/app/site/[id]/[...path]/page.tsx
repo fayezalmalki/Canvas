@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Sparkles, ChevronLeft, ChevronRight, Shield } from "lucide-react";
 import { scoreSeo } from "@/lib/seo-scorer";
+import { useLocale } from "@/context/locale-context";
 
 export default function PageDetail({
   params,
@@ -21,6 +22,7 @@ export default function PageDetail({
 }) {
   const { path } = use(params);
   const { crawlId, crawlResult, showImages } = useSiteContext();
+  const { t, isRtl } = useLocale();
   const router = useRouter();
   const rootUrl = crawlResult?.rootUrl ?? "";
 
@@ -81,7 +83,7 @@ export default function PageDetail({
           <div>
             <div className="text-sm font-medium text-amber-500">{page.botProtection}</div>
             <div className="text-xs text-muted-foreground mt-0.5">
-              This page is protected by bot detection. The crawler received a challenge page instead of the actual content. SEO data may be inaccurate.
+              {t("bot.warning")}
             </div>
           </div>
         </div>
@@ -96,7 +98,7 @@ export default function PageDetail({
           {seoScore.score}
         </div>
         <div className="flex-1">
-          <div className="text-sm font-medium">SEO Score</div>
+          <div className="text-sm font-medium">{t("page.seoScore")}</div>
           <div className="text-xs text-muted-foreground">{seoScore.summary}</div>
         </div>
         <Button
@@ -111,9 +113,9 @@ export default function PageDetail({
 
       <Tabs defaultValue="overview">
         <TabsList>
-          <TabsTrigger value="overview">SEO Overview</TabsTrigger>
+          <TabsTrigger value="overview">{t("page.seoOverview")}</TabsTrigger>
           <TabsTrigger value="links">
-            Links ({page.outgoingLinks.length})
+            {t("page.links")} ({page.outgoingLinks.length})
           </TabsTrigger>
         </TabsList>
 
@@ -132,12 +134,12 @@ export default function PageDetail({
           {prevPage ? (
             <button
               onClick={() => router.push(sitePageUrl(crawlId, prevPage.url))}
-              className="flex-1 flex items-center gap-2 rounded-lg border border-border bg-card p-3 text-left transition-colors hover:border-primary/50 min-w-0"
+              className="flex-1 flex items-center gap-2 rounded-lg border border-border bg-card p-3 text-start transition-colors hover:border-primary/50 min-w-0"
             >
               <ChevronLeft className="h-4 w-4 shrink-0 text-muted-foreground" />
               <div className="min-w-0">
-                <div className="text-[11px] text-muted-foreground">Previous</div>
-                <div className="text-sm truncate" dir="auto">{prevPage.title || "Untitled"}</div>
+                <div className="text-[11px] text-muted-foreground">{t("page.previous")}</div>
+                <div className="text-sm truncate" dir="auto">{prevPage.title || t("page.untitled")}</div>
                 <div className="text-[11px] text-muted-foreground font-mono truncate">
                   {(() => { try { return new URL(prevPage.url).pathname; } catch { return prevPage.url; } })()}
                 </div>
@@ -149,11 +151,11 @@ export default function PageDetail({
           {nextPage ? (
             <button
               onClick={() => router.push(sitePageUrl(crawlId, nextPage.url))}
-              className="flex-1 flex items-center gap-2 rounded-lg border border-border bg-card p-3 text-right transition-colors hover:border-primary/50 min-w-0 justify-end"
+              className="flex-1 flex items-center gap-2 rounded-lg border border-border bg-card p-3 text-end transition-colors hover:border-primary/50 min-w-0 justify-end"
             >
               <div className="min-w-0">
-                <div className="text-[11px] text-muted-foreground">Next</div>
-                <div className="text-sm truncate" dir="auto">{nextPage.title || "Untitled"}</div>
+                <div className="text-[11px] text-muted-foreground">{t("page.next")}</div>
+                <div className="text-sm truncate" dir="auto">{nextPage.title || t("page.untitled")}</div>
                 <div className="text-[11px] text-muted-foreground font-mono truncate">
                   {(() => { try { return new URL(nextPage.url).pathname; } catch { return nextPage.url; } })()}
                 </div>

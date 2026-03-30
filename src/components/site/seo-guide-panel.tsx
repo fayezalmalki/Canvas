@@ -3,6 +3,7 @@
 import { useState, useMemo } from "react";
 import type { CrawlPageResult } from "@/types/canvas";
 import type { SeoGuideItem } from "@/lib/seo-guide";
+import { useLocale } from "@/context/locale-context";
 import { generateSeoGuide } from "@/lib/seo-guide";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -96,18 +97,8 @@ function SeverityIcon({
   }
 }
 
-function severityLabel(s: SeoGuideItem["severity"]) {
-  switch (s) {
-    case "critical":
-      return "Critical";
-    case "important":
-      return "Important";
-    case "nice-to-have":
-      return "Nice to have";
-  }
-}
-
 function GuideItemCard({ item }: { item: SeoGuideItem }) {
+  const { t } = useLocale();
   const [expanded, setExpanded] = useState(false);
   const [showAllPages, setShowAllPages] = useState(false);
 
@@ -120,7 +111,7 @@ function GuideItemCard({ item }: { item: SeoGuideItem }) {
       <button
         type="button"
         onClick={() => setExpanded(!expanded)}
-        className="flex items-center gap-3 w-full p-3.5 text-left hover:bg-muted/30 transition-colors"
+        className="flex items-center gap-3 w-full p-3.5 text-start hover:bg-muted/30 transition-colors"
       >
         {expanded ? (
           <ChevronDown className="h-4 w-4 text-muted-foreground shrink-0" />
@@ -141,7 +132,7 @@ function GuideItemCard({ item }: { item: SeoGuideItem }) {
           variant="secondary"
           className="text-[10px] px-1.5 py-0 shrink-0 font-mono"
         >
-          {item.affectedPages.length} page{item.affectedPages.length !== 1 ? "s" : ""}
+          {item.affectedPages.length} {item.affectedPages.length === 1 ? t("common.page") : t("common.pages")}
         </Badge>
       </button>
 
@@ -154,7 +145,7 @@ function GuideItemCard({ item }: { item: SeoGuideItem }) {
           {/* Action Steps */}
           <div>
             <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2">
-              How to fix
+              {t("guide.howToFix")}
             </h4>
             <ul className="space-y-1.5">
               {item.actionSteps.map((step, i) => (
@@ -174,7 +165,7 @@ function GuideItemCard({ item }: { item: SeoGuideItem }) {
           {/* Affected Pages */}
           <div>
             <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2">
-              Affected pages
+              {t("guide.affectedPages")}
             </h4>
             <div className="rounded-md border border-border divide-y divide-border">
               {visiblePages.map((p) => (
@@ -199,7 +190,7 @@ function GuideItemCard({ item }: { item: SeoGuideItem }) {
                 onClick={() => setShowAllPages(true)}
                 className="mt-2 text-xs h-7"
               >
-                Show {item.affectedPages.length - 5} more pages
+                {t("guide.showMore", { count: item.affectedPages.length - 5 })}
               </Button>
             )}
             {showAllPages && item.affectedPages.length > 5 && (
@@ -209,7 +200,7 @@ function GuideItemCard({ item }: { item: SeoGuideItem }) {
                 onClick={() => setShowAllPages(false)}
                 className="mt-2 text-xs h-7"
               >
-                Show fewer
+                {t("guide.showFewer")}
               </Button>
             )}
           </div>
@@ -220,6 +211,7 @@ function GuideItemCard({ item }: { item: SeoGuideItem }) {
 }
 
 export function SeoGuidePanel({ pages }: SeoGuidePanelProps) {
+  const { t } = useLocale();
   const guide = useMemo(() => generateSeoGuide(pages), [pages]);
 
   const [searchQuery, setSearchQuery] = useState("");
@@ -260,9 +252,9 @@ export function SeoGuidePanel({ pages }: SeoGuidePanelProps) {
     return (
       <div className="rounded-lg border border-border bg-card p-8 text-center">
         <Sparkles className="mx-auto mb-3 h-8 w-8 text-emerald-500/60" />
-        <p className="text-sm font-medium">No SEO issues detected</p>
+        <p className="text-sm font-medium">{t("guide.noIssues")}</p>
         <p className="text-xs text-muted-foreground mt-1">
-          All pages are following SEO best practices
+          {t("guide.allGood")}
         </p>
       </div>
     );
@@ -279,7 +271,7 @@ export function SeoGuidePanel({ pages }: SeoGuidePanelProps) {
       {/* Header */}
       <div className="flex items-center gap-2.5">
         <Sparkles className="h-5 w-5 text-amber-500" />
-        <h2 className="text-base font-semibold">SEO Improvement Guide</h2>
+        <h2 className="text-base font-semibold">{t("guide.title")}</h2>
       </div>
 
       {/* Score + Stats */}
@@ -293,7 +285,7 @@ export function SeoGuidePanel({ pages }: SeoGuidePanelProps) {
                   <span className="h-2.5 w-2.5 rounded-full bg-rose-500" />
                   <span className="text-sm">
                     <span className="font-semibold">{guide.criticalCount}</span>{" "}
-                    <span className="text-muted-foreground">critical</span>
+                    <span className="text-muted-foreground">{t("guide.critical").toLowerCase()}</span>
                   </span>
                 </div>
               )}
@@ -302,7 +294,7 @@ export function SeoGuidePanel({ pages }: SeoGuidePanelProps) {
                   <span className="h-2.5 w-2.5 rounded-full bg-amber-500" />
                   <span className="text-sm">
                     <span className="font-semibold">{guide.importantCount}</span>{" "}
-                    <span className="text-muted-foreground">important</span>
+                    <span className="text-muted-foreground">{t("guide.important").toLowerCase()}</span>
                   </span>
                 </div>
               )}
@@ -311,7 +303,7 @@ export function SeoGuidePanel({ pages }: SeoGuidePanelProps) {
                   <span className="h-2.5 w-2.5 rounded-full bg-blue-500" />
                   <span className="text-sm">
                     <span className="font-semibold">{guide.niceToHaveCount}</span>{" "}
-                    <span className="text-muted-foreground">nice to have</span>
+                    <span className="text-muted-foreground">{t("guide.niceToHave").toLowerCase()}</span>
                   </span>
                 </div>
               )}
@@ -321,7 +313,7 @@ export function SeoGuidePanel({ pages }: SeoGuidePanelProps) {
             <div>
               <div className="flex items-center justify-between mb-1">
                 <span className="text-[11px] text-muted-foreground">
-                  Overall SEO Health
+                  {t("guide.overallHealth")}
                 </span>
                 <span className="text-[11px] font-mono text-muted-foreground">
                   {guide.overallScore}/100
@@ -341,12 +333,12 @@ export function SeoGuidePanel({ pages }: SeoGuidePanelProps) {
       {/* Search + Filter */}
       <div className="flex items-center gap-3">
         <div className="relative flex-1">
-          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+          <Search className="absolute start-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
           <Input
-            placeholder="Search issues..."
+            placeholder={t("guide.searchIssues")}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-8 h-8 text-sm"
+            className="ps-8 h-8 text-sm"
           />
         </div>
         <select
@@ -356,7 +348,7 @@ export function SeoGuidePanel({ pages }: SeoGuidePanelProps) {
         >
           {CATEGORY_OPTIONS.map((cat) => (
             <option key={cat} value={cat}>
-              {cat}
+              {cat === "All" ? t("guide.allCategories") : cat}
             </option>
           ))}
         </select>
@@ -365,7 +357,7 @@ export function SeoGuidePanel({ pages }: SeoGuidePanelProps) {
       {/* Sections */}
       {critical.length > 0 && (
         <SeveritySection
-          label="Critical"
+          label={t("guide.critical")}
           items={critical}
           collapsed={!!collapsedSections["critical"]}
           onToggle={() => toggleSection("critical")}
@@ -376,7 +368,7 @@ export function SeoGuidePanel({ pages }: SeoGuidePanelProps) {
 
       {important.length > 0 && (
         <SeveritySection
-          label="Important"
+          label={t("guide.important")}
           items={important}
           collapsed={!!collapsedSections["important"]}
           onToggle={() => toggleSection("important")}
@@ -387,7 +379,7 @@ export function SeoGuidePanel({ pages }: SeoGuidePanelProps) {
 
       {niceToHave.length > 0 && (
         <SeveritySection
-          label="Nice to have"
+          label={t("guide.niceToHave")}
           items={niceToHave}
           collapsed={!!collapsedSections["nice-to-have"]}
           onToggle={() => toggleSection("nice-to-have")}
@@ -400,7 +392,7 @@ export function SeoGuidePanel({ pages }: SeoGuidePanelProps) {
         <div className="rounded-lg border border-border bg-card p-6 text-center">
           <Search className="mx-auto mb-2 h-5 w-5 text-muted-foreground/40" />
           <p className="text-sm text-muted-foreground">
-            No issues match your search
+            {t("guide.noMatch")}
           </p>
         </div>
       )}
@@ -434,7 +426,7 @@ function SeveritySection({
         <span>
           {label} ({items.length})
         </span>
-        <span className="ml-auto">
+        <span className="ms-auto">
           {collapsed ? (
             <ChevronRight className="h-4 w-4" />
           ) : (

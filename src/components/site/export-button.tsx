@@ -2,11 +2,13 @@
 
 import { useState } from "react";
 import { useSiteContext } from "@/context/site-context";
+import { useLocale } from "@/context/locale-context";
 import { Button } from "@/components/ui/button";
 import { Download, Loader2, Check } from "lucide-react";
 
 export function ExportButton({ rootUrl }: { rootUrl: string }) {
   const { crawlResult } = useSiteContext();
+  const { t } = useLocale();
   const [exporting, setExporting] = useState(false);
   const [exported, setExported] = useState(false);
 
@@ -59,7 +61,7 @@ export function ExportButton({ rootUrl }: { rootUrl: string }) {
       ) : (
         <Download className="h-4 w-4" />
       )}
-      {exporting ? "Exporting..." : exported ? "Exported!" : "Export PDF"}
+      {exporting ? t("export.exporting") : exported ? t("export.exported") : t("export.button")}
     </Button>
   );
 }

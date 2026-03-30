@@ -1,6 +1,7 @@
 "use client";
 
 import type { PageSeoData, ProductData } from "@/types/canvas";
+import { useLocale } from "@/context/locale-context";
 import { Badge } from "@/components/ui/badge";
 import {
   CheckCircle2,
@@ -19,10 +20,12 @@ function MetaRow({
   label,
   value,
   warning,
+  notSetLabel,
 }: {
   label: string;
   value: string | null;
   warning?: boolean;
+  notSetLabel: string;
 }) {
   return (
     <div className="flex items-start gap-3 py-2 border-b border-border last:border-0">
@@ -33,7 +36,7 @@ function MetaRow({
         ) : (
           <span className="text-sm text-muted-foreground/50 italic flex items-center gap-1">
             {warning && <AlertTriangle className="h-3 w-3 text-amber-500" />}
-            Not set
+            {notSetLabel}
           </span>
         )}
       </div>
@@ -42,45 +45,38 @@ function MetaRow({
 }
 
 export function SeoOverview({ seo, products }: { seo: PageSeoData; products?: ProductData[] }) {
+  const { t } = useLocale();
   const h1Count = seo.headings.filter((h) => h.tag === "h1").length;
+  const notSet = t("seo.notSet");
 
   return (
     <div className="space-y-6">
       {/* Quick checks */}
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-        <QuickCheck
-          label="Meta Description"
-          pass={!!seo.meta.description}
-        />
-        <QuickCheck label="Canonical URL" pass={!!seo.meta.canonical} />
-        <QuickCheck label="Open Graph" pass={!!seo.meta.ogTitle} />
-        <QuickCheck
-          label="Structured Data"
-          pass={seo.hasStructuredData}
-        />
-        <QuickCheck label="Single H1" pass={h1Count === 1} />
-        <QuickCheck
-          label="All Images Have Alt"
-          pass={seo.imagesWithoutAlt === 0}
-        />
-        <QuickCheck label="Viewport Set" pass={!!seo.meta.viewport} />
-        <QuickCheck label="Language Set" pass={!!seo.meta.language} />
+        <QuickCheck label={t("seo.metaDesc")} pass={!!seo.meta.description} />
+        <QuickCheck label={t("seo.canonicalUrl")} pass={!!seo.meta.canonical} />
+        <QuickCheck label={t("seo.openGraph")} pass={!!seo.meta.ogTitle} />
+        <QuickCheck label={t("seo.structuredData")} pass={seo.hasStructuredData} />
+        <QuickCheck label={t("seo.singleH1")} pass={h1Count === 1} />
+        <QuickCheck label={t("seo.allImagesAlt")} pass={seo.imagesWithoutAlt === 0} />
+        <QuickCheck label={t("seo.viewportSet")} pass={!!seo.meta.viewport} />
+        <QuickCheck label={t("seo.languageSet")} pass={!!seo.meta.language} />
       </div>
 
       {/* Meta tags */}
       <div>
-        <h3 className="text-sm font-medium mb-2">Meta Tags</h3>
+        <h3 className="text-sm font-medium mb-2">{t("seo.metaTags")}</h3>
         <div className="rounded-lg border border-border bg-card p-3">
-          <MetaRow label="Description" value={seo.meta.description} warning />
-          <MetaRow label="Keywords" value={seo.meta.keywords} />
-          <MetaRow label="Canonical" value={seo.meta.canonical} />
-          <MetaRow label="Robots" value={seo.meta.robots} />
-          <MetaRow label="OG Title" value={seo.meta.ogTitle} />
-          <MetaRow label="OG Description" value={seo.meta.ogDescription} />
-          <MetaRow label="OG Image" value={seo.meta.ogImage} />
+          <MetaRow label={t("seo.metaDescription")} value={seo.meta.description} warning notSetLabel={notSet} />
+          <MetaRow label={t("seo.keywords")} value={seo.meta.keywords} notSetLabel={notSet} />
+          <MetaRow label={t("seo.canonical")} value={seo.meta.canonical} notSetLabel={notSet} />
+          <MetaRow label={t("seo.robots")} value={seo.meta.robots} notSetLabel={notSet} />
+          <MetaRow label={t("seo.ogTitle")} value={seo.meta.ogTitle} notSetLabel={notSet} />
+          <MetaRow label={t("seo.ogDescription")} value={seo.meta.ogDescription} notSetLabel={notSet} />
+          <MetaRow label={t("seo.ogImage")} value={seo.meta.ogImage} notSetLabel={notSet} />
           {seo.meta.ogImage && (
             <div className="py-2 border-b border-border last:border-0">
-              <div className="w-32 shrink-0 text-xs text-muted-foreground mb-2">OG Image Preview</div>
+              <div className="w-32 shrink-0 text-xs text-muted-foreground mb-2">{t("seo.ogImagePreview")}</div>
               <div className="rounded-md border border-border overflow-hidden bg-muted max-w-sm">
                 <img
                   src={seo.meta.ogImage}
@@ -92,12 +88,12 @@ export function SeoOverview({ seo, products }: { seo: PageSeoData; products?: Pr
                   }}
                 />
                 <div className="hidden flex items-center justify-center py-4 text-xs text-muted-foreground">
-                  Failed to load OG image
+                  {t("seo.ogImageFailed")}
                 </div>
               </div>
             </div>
           )}
-          <MetaRow label="Language" value={seo.meta.language} />
+          <MetaRow label={t("seo.language")} value={seo.meta.language} notSetLabel={notSet} />
         </div>
       </div>
 
@@ -105,7 +101,7 @@ export function SeoOverview({ seo, products }: { seo: PageSeoData; products?: Pr
       <div>
         <h3 className="text-sm font-medium mb-2 flex items-center gap-2">
           <Heading1 className="h-4 w-4" />
-          Heading Structure ({seo.headings.length})
+          {t("seo.headingStructure")} ({seo.headings.length})
         </h3>
         {seo.headings.length > 0 ? (
           <div className="rounded-lg border border-border bg-card p-3 space-y-1">
@@ -115,7 +111,7 @@ export function SeoOverview({ seo, products }: { seo: PageSeoData; products?: Pr
                 <div
                   key={i}
                   className="flex items-center gap-2 text-sm"
-                  style={{ paddingLeft: `${indent * 16}px` }}
+                  style={{ paddingInlineStart: `${indent * 16}px` }}
                 >
                   <Badge variant="outline" className="text-[10px] px-1 py-0 font-mono shrink-0">
                     {h.tag}
@@ -148,7 +144,7 @@ export function SeoOverview({ seo, products }: { seo: PageSeoData; products?: Pr
         {seo.hasStructuredData && (
           <div className="flex items-center gap-1.5">
             <Code className="h-3.5 w-3.5 text-muted-foreground" />
-            <span>Has structured data</span>
+            <span>{t("seo.hasStructuredData")}</span>
           </div>
         )}
       </div>
@@ -156,32 +152,32 @@ export function SeoOverview({ seo, products }: { seo: PageSeoData; products?: Pr
       {/* Performance */}
       {seo.performance && (
         <div>
-          <h3 className="text-sm font-medium mb-2">Performance</h3>
+          <h3 className="text-sm font-medium mb-2">{t("seo.performance")}</h3>
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
             <PerfStat
-              label="Response Time"
+              label={t("seo.responseTime")}
               value={`${seo.performance.responseTimeMs}ms`}
               warning={seo.performance.responseTimeMs > 3000}
             />
             <PerfStat
-              label="HTML Size"
+              label={t("seo.htmlSize")}
               value={formatBytes(seo.performance.htmlSizeBytes)}
               warning={seo.performance.htmlSizeBytes > 200 * 1024}
             />
             <PerfStat
-              label="Compression"
-              value={seo.performance.hasCompression ? "Yes" : "No"}
+              label={t("seo.compression")}
+              value={seo.performance.hasCompression ? t("seo.yes") : t("seo.no")}
               warning={!seo.performance.hasCompression}
             />
             <PerfStat
-              label="Cache-Control"
-              value={seo.performance.cacheControl ? "Set" : "Not set"}
+              label={t("seo.cacheControl")}
+              value={seo.performance.cacheControl ? t("seo.set") : t("seo.notSet")}
               warning={!seo.performance.cacheControl}
             />
           </div>
           {seo.performance.serverHeader && (
             <div className="mt-2 text-[11px] text-muted-foreground">
-              Server: {seo.performance.serverHeader}
+              {t("seo.server")} {seo.performance.serverHeader}
             </div>
           )}
         </div>
@@ -190,25 +186,25 @@ export function SeoOverview({ seo, products }: { seo: PageSeoData; products?: Pr
       {/* i18n / RTL */}
       {seo.i18n && (seo.i18n.hasArabicContent || seo.i18n.hreflangLinks.length > 0 || seo.i18n.dir) && (
         <div>
-          <h3 className="text-sm font-medium mb-2">Internationalization</h3>
+          <h3 className="text-sm font-medium mb-2">{t("seo.i18n")}</h3>
           <div className="rounded-lg border border-border bg-card p-3 space-y-2">
             <div className="flex gap-4 text-xs">
               {seo.i18n.dir && (
-                <span>Direction: <strong>{seo.i18n.dir.toUpperCase()}</strong></span>
+                <span>{t("seo.direction")} <strong>{seo.i18n.dir.toUpperCase()}</strong></span>
               )}
               {seo.i18n.hasArabicContent && (
-                <span>Arabic content: <strong>{Math.round(seo.i18n.arabicRatio * 100)}%</strong></span>
+                <span>{t("seo.arabicContent")} <strong>{Math.round(seo.i18n.arabicRatio * 100)}%</strong></span>
               )}
             </div>
             {seo.i18n.hasArabicContent && seo.i18n.dir !== "rtl" && (
               <div className="text-xs text-red-500 flex items-center gap-1">
                 <AlertTriangle className="h-3 w-3" />
-                Arabic content detected but no dir="rtl" attribute
+                {t("seo.arabicNoRtl")}
               </div>
             )}
             {seo.i18n.hreflangLinks.length > 0 && (
               <div className="space-y-1">
-                <div className="text-xs text-muted-foreground">Hreflang alternates:</div>
+                <div className="text-xs text-muted-foreground">{t("seo.hreflang")}</div>
                 {seo.i18n.hreflangLinks.map((link, i) => (
                   <div key={i} className="text-[11px] font-mono flex items-center gap-2">
                     <Badge variant="outline" className="text-[10px] px-1 py-0">{link.lang}</Badge>
@@ -224,7 +220,7 @@ export function SeoOverview({ seo, products }: { seo: PageSeoData; products?: Pr
       {/* Structured Data Details */}
       {seo.structuredData && seo.structuredData.length > 0 && (
         <div>
-          <h3 className="text-sm font-medium mb-2">Structured Data</h3>
+          <h3 className="text-sm font-medium mb-2">{t("seo.structuredData")}</h3>
           <div className="rounded-lg border border-border bg-card divide-y divide-border">
             {seo.structuredData.map((entry, i) => (
               <div key={i} className="p-3 space-y-1">
@@ -255,7 +251,7 @@ export function SeoOverview({ seo, products }: { seo: PageSeoData; products?: Pr
         <div>
           <h3 className="text-sm font-medium mb-2 flex items-center gap-2">
             <ShoppingCart className="h-4 w-4" />
-            Products ({products.length})
+            {t("seo.productsLabel")} ({products.length})
           </h3>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             {products.map((product, i) => {
@@ -281,7 +277,7 @@ export function SeoOverview({ seo, products }: { seo: PageSeoData; products?: Pr
                       {product.price && (
                         <div className="flex items-center gap-2 mt-0.5">
                           <span className={`text-sm font-semibold font-mono ${hasDiscount ? "text-red-500" : ""}`}>
-                            {product.currency && <span className="text-xs text-muted-foreground mr-0.5">{product.currency}</span>}
+                            {product.currency && <span className="text-xs text-muted-foreground me-0.5">{product.currency}</span>}
                             {product.price}
                           </span>
                           {product.originalPrice && product.originalPrice !== product.price && (
@@ -312,9 +308,9 @@ export function SeoOverview({ seo, products }: { seo: PageSeoData; products?: Pr
                                 : ""
                         }`}
                       >
-                        {product.availability === "InStock" ? "In Stock"
-                          : product.availability === "OutOfStock" ? "Out of Stock"
-                          : product.availability === "LimitedAvailability" ? "Limited"
+                        {product.availability === "InStock" ? t("seo.inStock")
+                          : product.availability === "OutOfStock" ? t("seo.outOfStock")
+                          : product.availability === "LimitedAvailability" ? t("seo.limited")
                           : product.availability}
                       </Badge>
                     )}
@@ -325,12 +321,12 @@ export function SeoOverview({ seo, products }: { seo: PageSeoData; products?: Pr
                     )}
                     {product.brand && (
                       <Badge variant="outline" className="text-[10px] px-1.5 py-0">
-                        <Tag className="h-2.5 w-2.5 mr-0.5" />{product.brand}
+                        <Tag className="h-2.5 w-2.5 me-0.5" />{product.brand}
                       </Badge>
                     )}
                     {product.rating && (
                       <Badge variant="outline" className="text-[10px] px-1.5 py-0 text-amber-500 border-amber-500/30">
-                        <Star className="h-2.5 w-2.5 mr-0.5 fill-amber-500" />{product.rating}
+                        <Star className="h-2.5 w-2.5 me-0.5 fill-amber-500" />{product.rating}
                       </Badge>
                     )}
                     <Badge variant="outline" className="text-[10px] px-1.5 py-0 font-mono">

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { IBM_Plex_Sans_Arabic, Geist_Mono } from "next/font/google";
 import { ConvexClientProvider } from "@/components/convex-provider";
+import { LocaleProvider } from "@/context/locale-context";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import "./globals.css";
 
@@ -38,7 +39,9 @@ export default function RootLayout({
       </head>
       <body className="h-full bg-background text-foreground">
         <ConvexClientProvider>
-          <TooltipProvider>{children}</TooltipProvider>
+          <LocaleProvider>
+            <TooltipProvider>{children}</TooltipProvider>
+          </LocaleProvider>
         </ConvexClientProvider>
       </body>
     </html>

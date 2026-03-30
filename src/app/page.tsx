@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { useLocale } from "@/context/locale-context";
 import {
   Globe,
   Loader2,
@@ -20,6 +21,7 @@ import {
   Clock,
   FileText,
   ExternalLink,
+  Languages,
 } from "lucide-react";
 
 interface CrawledPage {
@@ -29,6 +31,7 @@ interface CrawledPage {
 
 export default function Home() {
   const router = useRouter();
+  const { locale, setLocale, t } = useLocale();
   const storeCrawl = useMutation(api.crawls.storeCrawlResult);
   const [url, setUrl] = useState("");
   const [maxDepth, setMaxDepth] = useState(2);
@@ -57,7 +60,7 @@ export default function Home() {
     try {
       new URL(normalizedUrl);
     } catch {
-      setError("Please enter a valid URL");
+      setError(t("home.invalidUrl"));
       return;
     }
 
@@ -137,30 +140,37 @@ export default function Home() {
 
   return (
     <div className="flex min-h-full items-center justify-center p-4 relative">
-      <div className="absolute top-4 right-4">
+      <div className="absolute top-4 end-4 flex items-center gap-1.5">
+        <button
+          onClick={() => setLocale(locale === "en" ? "ar" : "en")}
+          className="inline-flex items-center justify-center rounded-md h-9 w-9 text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
+          title={locale === "en" ? "العربية" : "English"}
+        >
+          <Languages className="h-4 w-4" />
+        </button>
         <ThemeToggle />
       </div>
       <div className="w-full max-w-lg space-y-8">
         <div className="text-center space-y-3">
           <h1 className="text-4xl font-bold tracking-tight text-gradient-brand">
-            بصيـــرة
+            {t("home.brand")}
           </h1>
           <p className="text-sm font-medium text-muted-foreground tracking-wide uppercase">
-            Baseera
+            {t("home.brandSub")}
           </p>
           <p className="text-muted-foreground text-sm">
-            Crawl any website to analyze its SEO, content, and products
+            {t("home.description")}
           </p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Search className="absolute start-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
               value={url}
               onChange={(e) => setUrl(e.target.value)}
-              placeholder="example.com"
-              className="h-12 pl-10 text-base font-mono"
+              placeholder={t("home.placeholder")}
+              className="h-12 ps-10 text-base font-mono"
               disabled={crawling}
               autoFocus
             />
@@ -178,7 +188,7 @@ export default function Home() {
               ) : (
                 <ChevronDown className="h-3 w-3" />
               )}
-              Advanced options
+              {t("home.advanced")}
             </button>
           )}
 
@@ -187,7 +197,7 @@ export default function Home() {
               <div className="flex gap-4">
                 <div className="flex-1 space-y-1">
                   <label className="text-xs text-muted-foreground">
-                    Max Depth
+                    {t("home.maxDepth")}
                   </label>
                   <Input
                     type="number"
@@ -200,7 +210,7 @@ export default function Home() {
                 </div>
                 <div className="flex-1 space-y-1">
                   <label className="text-xs text-muted-foreground">
-                    Max Pages
+                    {t("home.maxPages")}
                   </label>
                   <Input
                     type="number"
@@ -220,7 +230,7 @@ export default function Home() {
                   className="h-3.5 w-3.5 rounded border-border accent-primary"
                 />
                 <span className="text-xs text-muted-foreground">
-                  Capture page screenshots (slower but provides visual previews)
+                  {t("home.screenshots")}
                 </span>
               </label>
             </div>
@@ -242,10 +252,10 @@ export default function Home() {
             {crawling ? (
               <>
                 <Loader2 className="h-4 w-4 animate-spin" />
-                Crawling...
+                {t("home.crawling")}
               </>
             ) : (
-              "Analyze Site"
+              t("home.analyze")
             )}
           </Button>
         </form>
@@ -255,7 +265,7 @@ export default function Home() {
           <div className="space-y-3">
             <div className="flex items-center justify-between text-sm">
               <span className="text-muted-foreground">
-                Crawled {crawlCount.current} of {crawlCount.total} pages
+                {t("home.crawled", { current: crawlCount.current, total: crawlCount.total })}
               </span>
               <span className="font-mono text-xs text-muted-foreground">
                 {progressPercent}%
@@ -265,7 +275,7 @@ export default function Home() {
 
             {crawlCount.discovered > crawlCount.current && (
               <p className="text-xs text-muted-foreground">
-                Discovered {crawlCount.discovered} URLs total ({crawlCount.discovered - crawlCount.current} remaining)
+                {t("home.discovered", { total: crawlCount.discovered, remaining: crawlCount.discovered - crawlCount.current })}
               </p>
             )}
 
@@ -280,7 +290,7 @@ export default function Home() {
                     <span className="truncate">
                       {page.title || page.url}
                     </span>
-                    <span className="ml-auto text-muted-foreground/50 font-mono text-[10px] truncate max-w-[120px]">
+                    <span className="ms-auto text-muted-foreground/50 font-mono text-[10px] truncate max-w-[120px]">
                       {new URL(page.url).pathname}
                     </span>
                   </div>
@@ -289,7 +299,7 @@ export default function Home() {
             )}
 
             <p className="text-center text-xs text-muted-foreground">
-              This may take a few minutes depending on the site size
+              {t("home.patience")}
             </p>
           </div>
         )}
@@ -302,11 +312,11 @@ export default function Home() {
               className="flex w-full items-center gap-2 text-left"
             >
               <Clock className="h-4 w-4 text-muted-foreground" />
-              <h2 className="text-sm font-medium">Recent Sites</h2>
+              <h2 className="text-sm font-medium">{t("home.recentSites")}</h2>
               <Badge variant="outline" className="text-[10px] px-1.5 py-0 ml-1">
                 {recentCrawls.length}
               </Badge>
-              <div className="ml-auto">
+              <div className="ms-auto">
                 {recentExpanded ? (
                   <ChevronUp className="h-4 w-4 text-muted-foreground" />
                 ) : (
@@ -341,10 +351,10 @@ export default function Home() {
                       <div className="flex items-center gap-3 text-xs text-muted-foreground mt-0.5">
                         <span className="flex items-center gap-1">
                           <FileText className="h-3 w-3" />
-                          {crawl.pagesCount} crawled
+                          {crawl.pagesCount} {t("home.crawledCount")}
                           {hasRemaining && (
                             <span className="text-amber-500">
-                              / {totalDiscovered} found
+                              / {totalDiscovered} {t("home.foundCount")}
                             </span>
                           )}
                         </span>

@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import type { CrawlPageResult } from "@/types/canvas";
 import { useSiteContext } from "@/context/site-context";
+import { useLocale } from "@/context/locale-context";
 import { siteUrl } from "@/lib/navigation";
 import { Badge } from "@/components/ui/badge";
 import { ExternalLink, ChevronRight, Home } from "lucide-react";
@@ -10,6 +11,7 @@ import { ExternalLink, ChevronRight, Home } from "lucide-react";
 export function PageHeader({ page }: { page: CrawlPageResult }) {
   const router = useRouter();
   const { crawlId } = useSiteContext();
+  const { t } = useLocale();
   const pathname = new URL(page.url).pathname;
 
   // Build breadcrumb segments from pathname
@@ -18,13 +20,13 @@ export function PageHeader({ page }: { page: CrawlPageResult }) {
   return (
     <div className="space-y-2">
       {/* Breadcrumb */}
-      <nav className="flex items-center gap-1 text-xs text-muted-foreground" dir="ltr">
+      <nav className="flex items-center gap-1 text-xs text-muted-foreground">
         <button
           onClick={() => router.push(`/site/${crawlId}`)}
           className="flex items-center gap-1 hover:text-foreground transition-colors"
         >
           <Home className="h-3 w-3" />
-          <span>Overview</span>
+          <span>{t("page.overview")}</span>
         </button>
         {segments.map((seg, i) => {
           const isLast = i === segments.length - 1;
@@ -54,7 +56,7 @@ export function PageHeader({ page }: { page: CrawlPageResult }) {
       </nav>
 
       <div className="flex items-center gap-2">
-        <h2 className="text-lg font-semibold" dir="auto">{page.title || "Untitled"}</h2>
+        <h2 className="text-lg font-semibold" dir="auto">{page.title || t("page.untitled")}</h2>
         <a
           href={page.url}
           target="_blank"
@@ -72,7 +74,7 @@ export function PageHeader({ page }: { page: CrawlPageResult }) {
           {page.seo.statusCode}
         </Badge>
         <span className="text-xs text-muted-foreground">
-          {page.seo.wordCount} words
+          {page.seo.wordCount} {t("page.words")}
         </span>
       </div>
     </div>

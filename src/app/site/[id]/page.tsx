@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useMutation } from "convex/react";
 import { api } from "@convex/_generated/api";
 import { useSiteContext } from "@/context/site-context";
+import { useLocale } from "@/context/locale-context";
 import { sitePageUrl, siteRootPageUrl } from "@/lib/navigation";
 import { deduplicatePages } from "@/lib/dedup-pages";
 import { Badge } from "@/components/ui/badge";
@@ -54,6 +55,7 @@ export default function SiteOverview({
 }) {
   const { id } = use(params);
   const { crawlId, crawlResult, showImages, discoveredUrls, setCrawlResult } = useSiteContext();
+  const { t } = useLocale();
   const rootUrl = crawlResult?.rootUrl ?? "";
   const router = useRouter();
   const storeCrawl = useMutation(api.crawls.storeCrawlResult);
@@ -105,34 +107,34 @@ export default function SiteOverview({
   const totalProducts = allProducts.length;
 
   const stats = [
-    { label: "Pages", value: pages.length, icon: FileText, tab: "pages" },
-    { label: "Avg SEO Score", value: avgSeoScore, icon: Gauge, color: avgScoreColor, tab: "seo-guide" },
-    { label: "Internal Links", value: totalInternalLinks, icon: Link2, tab: "internal-links" },
-    { label: "External Links", value: totalExternalLinks, icon: ExternalLinkIcon, tab: "external-links" },
-    { label: "Images", value: totalImages, icon: Image, tab: "images" },
+    { label: t("stats.pages"), value: pages.length, icon: FileText, tab: "pages" },
+    { label: t("stats.avgSeoScore"), value: avgSeoScore, icon: Gauge, color: avgScoreColor, tab: "seo-guide" },
+    { label: t("stats.internalLinks"), value: totalInternalLinks, icon: Link2, tab: "internal-links" },
+    { label: t("stats.externalLinks"), value: totalExternalLinks, icon: ExternalLinkIcon, tab: "external-links" },
+    { label: t("stats.images"), value: totalImages, icon: Image, tab: "images" },
     {
-      label: "Missing Alt",
+      label: t("stats.missingAlt"),
       value: missingAlt,
       icon: AlertTriangle,
       warning: missingAlt > 0,
       tab: "images",
     },
     {
-      label: "No Meta Desc",
+      label: t("stats.noMetaDesc"),
       value: missingDescription,
       icon: Search,
       warning: missingDescription > 0,
       tab: "content",
     },
     ...(brokenLinksCount > 0 ? [{
-      label: "Broken Links",
+      label: t("stats.brokenLinks"),
       value: brokenLinksCount,
       icon: Link2Off,
       warning: true,
       tab: "broken-links",
     }] : []),
     ...(avgResponseTime !== null ? [{
-      label: "Avg Response",
+      label: t("stats.avgResponse"),
       value: avgResponseTime,
       icon: Timer,
       suffix: "ms",
@@ -273,10 +275,10 @@ export default function SiteOverview({
   return (
     <div className="p-6 space-y-6">
       <div>
-        <h2 className="text-lg font-semibold">Site Overview</h2>
+        <h2 className="text-lg font-semibold">{t("overview.title")}</h2>
         <p className="text-sm text-muted-foreground">
-          {new URL(rootUrl).hostname} &middot; {pages.length} pages &middot; avg {avgWordCount} words/page
-          {avgResponseTime !== null && ` · avg ${avgResponseTime}ms response`}
+          {new URL(rootUrl).hostname} &middot; {pages.length} {t("overview.pagesLabel")} &middot; {t("overview.avgWords", { count: avgWordCount })}
+          {avgResponseTime !== null && ` · ${t("overview.avgResponse", { time: avgResponseTime })}`}
         </p>
       </div>
 
@@ -306,10 +308,10 @@ export default function SiteOverview({
         <div className="rounded-lg border border-amber-500/30 bg-amber-500/5 p-4 flex items-center gap-4">
           <div className="flex-1">
             <div className="text-sm font-medium">
-              {discoveredUrls.length} more pages discovered
+              {t("overview.moreDiscovered", { count: discoveredUrls.length })}
             </div>
             <div className="text-xs text-muted-foreground mt-0.5">
-              {pages.length} pages crawled out of {pages.length + discoveredUrls.length} found on the site
+              {t("overview.crawledOf", { crawled: pages.length, total: pages.length + discoveredUrls.length })}
             </div>
           </div>
           {continueCrawling ? (
@@ -320,7 +322,7 @@ export default function SiteOverview({
           ) : (
             <Button variant="outline" size="sm" onClick={handleContinueCrawl}>
               <Plus className="h-4 w-4" />
-              Crawl Remaining
+              {t("overview.crawlRemaining")}
             </Button>
           )}
         </div>
@@ -330,24 +332,24 @@ export default function SiteOverview({
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList className="flex-wrap">
           <TabsTrigger value="pages">
-            Pages ({pages.length})
+            {t("tabs.pages")} ({pages.length})
           </TabsTrigger>
           <TabsTrigger value="seo-guide">
             <Sparkles className="h-3.5 w-3.5" />
-            SEO Guide
+            {t("tabs.seoGuide")}
           </TabsTrigger>
           <TabsTrigger value="internal-links">
-            Internal Links
+            {t("tabs.internalLinks")}
           </TabsTrigger>
           <TabsTrigger value="external-links">
-            External Links
+            {t("tabs.externalLinks")}
           </TabsTrigger>
           <TabsTrigger value="images">
-            Images
+            {t("tabs.images")}
           </TabsTrigger>
           {(brokenLinksCount > 0 || redirectChainsCount > 0) && (
             <TabsTrigger value="broken-links">
-              Links Health
+              {t("tabs.linksHealth")}
               {brokenLinksCount > 0 && (
                 <Badge variant="outline" className="ml-1.5 text-[10px] px-1 py-0 text-amber-500 border-amber-500/30">
                   {brokenLinksCount}
@@ -356,18 +358,18 @@ export default function SiteOverview({
             </TabsTrigger>
           )}
           <TabsTrigger value="content">
-            Content Issues
+            {t("tabs.contentIssues")}
           </TabsTrigger>
           {pagesWithArabic > 0 && (
             <TabsTrigger value="i18n">
               <Languages className="h-3.5 w-3.5" />
-              i18n
+              {t("tabs.i18n")}
             </TabsTrigger>
           )}
           {totalProducts > 0 && (
             <TabsTrigger value="products">
               <ShoppingCart className="h-3.5 w-3.5" />
-              Products
+              {t("tabs.products")}
               <Badge variant="outline" className="ml-1.5 text-[10px] px-1 py-0">
                 {totalProducts}
               </Badge>
@@ -384,11 +386,11 @@ export default function SiteOverview({
                 onChange={(e) => setPageSort(e.target.value as PageSort)}
                 className="h-8 rounded-md border border-border bg-card px-2 text-xs text-foreground"
               >
-                <option value="smart">Smart (Recommended)</option>
-                <option value="route">Group by Route</option>
-                <option value="seo-score">SEO Score (High → Low)</option>
-                <option value="response-time">Response Time (Fast → Slow)</option>
-                <option value="word-count">Word Count (Most → Least)</option>
+                <option value="smart">{t("sort.smart")}</option>
+                <option value="route">{t("sort.route")}</option>
+                <option value="seo-score">{t("sort.seoScore")}</option>
+                <option value="response-time">{t("sort.responseTime")}</option>
+                <option value="word-count">{t("sort.wordCount")}</option>
               </select>
             </div>
             <div className="flex items-center gap-1 rounded-lg border border-border bg-card p-0.5">
@@ -504,6 +506,7 @@ export default function SiteOverview({
 }
 
 function I18nSummary({ pages }: { pages: CrawlPageResult[] }) {
+  const { t } = useLocale();
   const arabicPages = pages.filter((p) => p.seo.i18n?.hasArabicContent);
   const rtlPages = pages.filter((p) => p.seo.i18n?.dir === "rtl");
   const hreflangPages = pages.filter((p) => (p.seo.i18n?.hreflangLinks.length ?? 0) > 0);
@@ -513,19 +516,19 @@ function I18nSummary({ pages }: { pages: CrawlPageResult[] }) {
     <div className="space-y-4">
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         <div className="rounded-lg border border-border bg-card p-3 space-y-1">
-          <div className="text-xs text-muted-foreground">Arabic Pages</div>
+          <div className="text-xs text-muted-foreground">{t("i18n.arabicPages")}</div>
           <div className="text-xl font-semibold font-mono">{arabicPages.length}</div>
         </div>
         <div className="rounded-lg border border-border bg-card p-3 space-y-1">
-          <div className="text-xs text-muted-foreground">RTL Configured</div>
+          <div className="text-xs text-muted-foreground">{t("i18n.rtlConfigured")}</div>
           <div className="text-xl font-semibold font-mono">{rtlPages.length}</div>
         </div>
         <div className="rounded-lg border border-border bg-card p-3 space-y-1">
-          <div className="text-xs text-muted-foreground">Has Hreflang</div>
+          <div className="text-xs text-muted-foreground">{t("i18n.hasHreflang")}</div>
           <div className="text-xl font-semibold font-mono">{hreflangPages.length}</div>
         </div>
         <div className="rounded-lg border border-border bg-card p-3 space-y-1">
-          <div className="text-xs text-muted-foreground">Missing RTL</div>
+          <div className="text-xs text-muted-foreground">{t("i18n.missingRtl")}</div>
           <div className={`text-xl font-semibold font-mono ${missingRtl.length > 0 ? "text-red-500" : ""}`}>
             {missingRtl.length}
           </div>
@@ -535,7 +538,7 @@ function I18nSummary({ pages }: { pages: CrawlPageResult[] }) {
       {missingRtl.length > 0 && (
         <div>
           <h3 className="text-sm font-medium mb-2 text-red-500">
-            Arabic pages without dir="rtl"
+            {t("i18n.arabicWithoutRtl")}
           </h3>
           <div className="rounded-lg border border-red-500/20 bg-card divide-y divide-border">
             {missingRtl.map((page) => {
@@ -547,7 +550,7 @@ function I18nSummary({ pages }: { pages: CrawlPageResult[] }) {
                     {Math.round((page.seo.i18n?.arabicRatio ?? 0) * 100)}% Arabic
                   </Badge>
                   <div className="min-w-0">
-                    <div className="text-sm truncate" dir="auto">{page.title || "Untitled"}</div>
+                    <div className="text-sm truncate" dir="auto">{page.title || t("page.untitled")}</div>
                     <div className="text-[11px] text-muted-foreground font-mono truncate">{pathname}</div>
                   </div>
                 </div>
@@ -559,7 +562,7 @@ function I18nSummary({ pages }: { pages: CrawlPageResult[] }) {
 
       {arabicPages.length > 0 && (
         <div>
-          <h3 className="text-sm font-medium mb-2">All Arabic Content Pages</h3>
+          <h3 className="text-sm font-medium mb-2">{t("i18n.allArabicPages")}</h3>
           <div className="rounded-lg border border-border bg-card divide-y divide-border">
             {arabicPages.map((page) => {
               let pathname = "/";
@@ -582,7 +585,7 @@ function I18nSummary({ pages }: { pages: CrawlPageResult[] }) {
                     )}
                   </div>
                   <div className="min-w-0">
-                    <div className="text-sm truncate" dir="auto">{page.title || "Untitled"}</div>
+                    <div className="text-sm truncate" dir="auto">{page.title || t("page.untitled")}</div>
                     <div className="text-[11px] text-muted-foreground font-mono truncate">{pathname}</div>
                   </div>
                 </div>
@@ -596,6 +599,7 @@ function I18nSummary({ pages }: { pages: CrawlPageResult[] }) {
 }
 
 function PageListItem({ page, onClick, sortMode }: { page: CrawlPageResult; onClick: () => void; sortMode?: PageSort }) {
+  const { t } = useLocale();
   let pathname = "/";
   try { pathname = new URL(page.url).pathname; } catch {}
 
@@ -613,7 +617,7 @@ function PageListItem({ page, onClick, sortMode }: { page: CrawlPageResult; onCl
       <div className="flex-1 min-w-0 space-y-1">
         <div className="flex items-center gap-2">
           <span className="text-sm font-medium truncate" dir="auto">
-            {page.title || "Untitled"}
+            {page.title || t("page.untitled")}
           </span>
           {lang && (
             <Badge variant="outline" className="text-[10px] px-1 py-0 shrink-0">
@@ -632,9 +636,9 @@ function PageListItem({ page, onClick, sortMode }: { page: CrawlPageResult; onCl
         </div>
         {/* Mini summary */}
         {!page.botProtection && <div className="flex items-center gap-3 text-[11px] text-muted-foreground flex-wrap">
-          <span>{wordCount} words</span>
-          <span>{page.seo.internalLinkCount} links</span>
-          <span>{page.seo.imageCount} imgs</span>
+          <span>{wordCount} {t("page.words")}</span>
+          <span>{page.seo.internalLinkCount} {t("page.linksLabel")}</span>
+          <span>{page.seo.imageCount} {t("page.imgs")}</span>
           {page.seo.performance && (
             <span className={page.seo.performance.responseTimeMs > 3000 ? "text-amber-500" : ""}>
               {page.seo.performance.responseTimeMs}ms
@@ -650,32 +654,32 @@ function PageListItem({ page, onClick, sortMode }: { page: CrawlPageResult; onCl
         <div className="flex gap-1.5">
           {!hasDesc && (
             <Badge variant="outline" className="text-[10px] px-1 py-0 text-amber-500 border-amber-500/30">
-              No meta desc
+              {t("common.noMetaDesc")}
             </Badge>
           )}
           {!hasOg && (
             <Badge variant="outline" className="text-[10px] px-1 py-0 text-amber-500 border-amber-500/30">
-              No OG tags
+              {t("common.noOgTags")}
             </Badge>
           )}
           {page.seo.imagesWithoutAlt > 0 && (
             <Badge variant="outline" className="text-[10px] px-1 py-0 text-amber-500 border-amber-500/30">
-              {page.seo.imagesWithoutAlt} img no alt
+              {page.seo.imagesWithoutAlt} {t("common.imgNoAlt")}
             </Badge>
           )}
           {page.seo.hasStructuredData && (
             <Badge variant="outline" className="text-[10px] px-1 py-0 text-emerald-500 border-emerald-500/30">
-              Schema
+              {t("common.schema")}
             </Badge>
           )}
           {page.seo.i18n?.hasArabicContent && page.seo.i18n?.dir !== "rtl" && (
             <Badge variant="outline" className="text-[10px] px-1 py-0 text-red-500 border-red-500/30">
-              No RTL
+              {t("common.noRtl")}
             </Badge>
           )}
           {page.seo.i18n?.hasArabicContent && page.seo.i18n?.dir === "rtl" && (
             <Badge variant="outline" className="text-[10px] px-1 py-0 text-emerald-500 border-emerald-500/30">
-              RTL
+              {t("common.rtl")}
             </Badge>
           )}
         </div>
@@ -712,10 +716,11 @@ function PageGridItem({
   showImages: boolean;
   onClick: () => void;
 }) {
+  const { t } = useLocale();
   return (
     <button
       onClick={onClick}
-      className="group rounded-lg border border-border bg-card overflow-hidden text-left transition-colors hover:border-primary/50"
+      className="group rounded-lg border border-border bg-card overflow-hidden text-start transition-colors hover:border-primary/50"
     >
       {showImages && (
         <div className="aspect-video bg-muted overflow-hidden">
@@ -736,22 +741,22 @@ function PageGridItem({
         </div>
       )}
       <div className="p-3 space-y-1">
-        <div className="text-sm font-medium truncate" dir="auto">{page.title || "Untitled"}</div>
+        <div className="text-sm font-medium truncate" dir="auto">{page.title || t("page.untitled")}</div>
         <div className="text-xs text-muted-foreground font-mono truncate">
           {new URL(page.url).pathname}
         </div>
         <div className="text-[11px] text-muted-foreground">
-          {page.seo.wordCount} words &middot; {page.seo.internalLinkCount} links
+          {page.seo.wordCount} {t("page.words")} &middot; {page.seo.internalLinkCount} {t("page.linksLabel")}
         </div>
         <div className="flex gap-1.5 pt-1">
           {!page.seo.meta.description && (
             <Badge variant="outline" className="text-[10px] px-1 py-0 text-amber-500 border-amber-500/30">
-              No meta desc
+              {t("common.noMetaDesc")}
             </Badge>
           )}
           {page.seo.imagesWithoutAlt > 0 && (
             <Badge variant="outline" className="text-[10px] px-1 py-0 text-amber-500 border-amber-500/30">
-              {page.seo.imagesWithoutAlt} img no alt
+              {page.seo.imagesWithoutAlt} {t("common.imgNoAlt")}
             </Badge>
           )}
         </div>

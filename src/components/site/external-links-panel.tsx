@@ -2,6 +2,7 @@
 
 import { useState, useMemo } from "react";
 import type { CrawlPageResult } from "@/types/canvas";
+import { useLocale } from "@/context/locale-context";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { ExternalLink, Search, ChevronDown, ChevronRight, Globe } from "lucide-react";
@@ -24,6 +25,7 @@ interface DomainGroup {
 }
 
 export function ExternalLinksPanel({ pages }: ExternalLinksPanelProps) {
+  const { t } = useLocale();
   const [search, setSearch] = useState("");
   const [expandedDomains, setExpandedDomains] = useState<Set<string>>(new Set());
 
@@ -52,7 +54,7 @@ export function ExternalLinksPanel({ pages }: ExternalLinksPanelProps) {
         if (linkOrigin !== siteOrigin) {
           allEntries.push({
             sourceUrl: page.url,
-            sourceTitle: page.title || "Untitled",
+            sourceTitle: page.title || t("page.untitled"),
             targetUrl: link.url,
             anchorText: link.anchorText || "(no anchor text)",
             domain: linkDomain,
@@ -84,7 +86,7 @@ export function ExternalLinksPanel({ pages }: ExternalLinksPanelProps) {
       totalDomains: groups.length,
       topDomains: top,
     };
-  }, [pages]);
+  }, [pages, t]);
 
   const filteredGroups = useMemo(() => {
     if (!search) return domainGroups;
@@ -130,48 +132,28 @@ export function ExternalLinksPanel({ pages }: ExternalLinksPanelProps) {
       <div className="grid grid-cols-3 gap-3">
         <div className="rounded-lg border border-border bg-card p-3 text-center">
           <div className="text-lg font-semibold">{totalExternalLinks}</div>
-          <div className="text-[11px] text-muted-foreground">Total Links</div>
+          <div className="text-[11px] text-muted-foreground">{t("external.totalLinks")}</div>
         </div>
         <div className="rounded-lg border border-border bg-card p-3 text-center">
           <div className="text-lg font-semibold">{totalDomains}</div>
-          <div className="text-[11px] text-muted-foreground">Domains</div>
+          <div className="text-[11px] text-muted-foreground">{t("external.domains")}</div>
         </div>
         <div className="rounded-lg border border-border bg-card p-3 text-center">
           <div className="text-xs font-mono truncate text-muted-foreground pt-1">
             {topDomains[0] || "—"}
           </div>
-          <div className="text-[11px] text-muted-foreground">Most Linked</div>
+          <div className="text-[11px] text-muted-foreground">{t("external.topDomain")}</div>
         </div>
       </div>
 
-      {/* Top Domains */}
-      {topDomains.length > 1 && (
-        <div className="flex items-center gap-2 flex-wrap">
-          <Globe className="h-3.5 w-3.5 text-muted-foreground" />
-          <span className="text-[11px] text-muted-foreground">Top domains:</span>
-          {topDomains.map((d) => {
-            const group = domainGroups.find((g) => g.domain === d);
-            return (
-              <Badge
-                key={d}
-                variant="outline"
-                className="text-[10px] px-1.5 py-0 font-mono"
-              >
-                {d} ({group?.links.length})
-              </Badge>
-            );
-          })}
-        </div>
-      )}
-
       {/* Search */}
       <div className="relative">
-        <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+        <Search className="absolute start-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
         <Input
-          placeholder="Filter by domain, URL, or anchor text..."
+          placeholder={t("external.searchPlaceholder")}
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          className="pl-8 h-8 text-xs"
+          className="ps-8 h-8 text-xs"
         />
       </div>
 
@@ -184,7 +166,7 @@ export function ExternalLinksPanel({ pages }: ExternalLinksPanelProps) {
               <button
                 type="button"
                 onClick={() => toggleDomain(group.domain)}
-                className="w-full flex items-center gap-2 p-3 text-left hover:bg-muted/50 transition-colors"
+                className="w-full flex items-center gap-2 p-3 text-start hover:bg-muted/50 transition-colors"
               >
                 {isExpanded ? (
                   <ChevronDown className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
