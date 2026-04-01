@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { ConvexHttpClient } from "convex/browser";
 import { api } from "@convex/_generated/api";
-import { generatePdfHtml } from "@/lib/pdf-template";
+import { generatePdfBuffer } from "@/lib/pdf-template";
 import type { Locale } from "@/lib/i18n";
 
-export const maxDuration = 120;
+export const maxDuration = 60;
 
 export async function POST(req: NextRequest) {
   try {
@@ -36,71 +36,24 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Generate HTML
-    const html = generatePdfHtml(crawlData, locale);
+    // Generate PDF directly (no browser needed)
+    const pdfBuffer = generatePdfBuffer(crawlData, locale);
 
-    // Launch Chromium and generate PDF
-    let browser;
+    let domain = "";
     try {
-      const puppeteer = await import("puppeteer-core");
-
-      let executablePath: string;
-      if (process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME) {
-        // Serverless environment
-        const chromium = (await import("@sparticuz/chromium")).default;
-        executablePath = await chromium.executablePath();
-        browser = await puppeteer.default.launch({
-          args: chromium.args,
-          defaultViewport: { width: 1280, height: 720 },
-          executablePath,
-          headless: true,
-        });
-      } else {
-        // Local development — use system Chrome
-        const possiblePaths = [
-          "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
-          "/usr/bin/google-chrome",
-          "/usr/bin/chromium-browser",
-          "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe",
-        ];
-        const fs = await import("fs");
-        executablePath =
-          possiblePaths.find((p) => fs.existsSync(p)) || possiblePaths[0];
-        browser = await puppeteer.default.launch({
-          executablePath,
-          headless: true,
-          args: ["--no-sandbox", "--disable-setuid-sandbox"],
-        });
-      }
-
-      const page = await browser.newPage();
-      await page.setContent(html, { waitUntil: "domcontentloaded", timeout: 30000 });
-      const pdfBuffer = await page.pdf({
-        format: "A4",
-        printBackground: true,
-        margin: { top: "0", right: "0", bottom: "0", left: "0" },
-      });
-
-      let domain = "";
-      try {
-        domain = new URL(crawlData.rootUrl).hostname;
-      } catch {
-        domain = "report";
-      }
-      const dateStr = new Date().toISOString().slice(0, 10);
-
-      return new NextResponse(Buffer.from(pdfBuffer), {
-        status: 200,
-        headers: {
-          "Content-Type": "application/pdf",
-          "Content-Disposition": `attachment; filename="${domain}-seo-report-${dateStr}.pdf"`,
-        },
-      });
-    } finally {
-      if (browser) {
-        await browser.close();
-      }
+      domain = new URL(crawlData.rootUrl).hostname;
+    } catch {
+      domain = "report";
     }
+    const dateStr = new Date().toISOString().slice(0, 10);
+
+    return new NextResponse(Buffer.from(pdfBuffer), {
+      status: 200,
+      headers: {
+        "Content-Type": "application/pdf",
+        "Content-Disposition": `attachment; filename="${domain}-seo-report-${dateStr}.pdf"`,
+      },
+    });
   } catch (error) {
     console.error("PDF export error:", error);
     return NextResponse.json(
