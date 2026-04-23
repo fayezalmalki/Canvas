@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { IBM_Plex_Sans_Arabic, Geist_Mono } from "next/font/google";
+import { thmanyahSans, thmanyahSerifDisplay, thmanyahSerifText } from "./fonts";
 import { ConvexClientProvider } from "@/components/convex-provider";
 import { LocaleProvider } from "@/context/locale-context";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -29,7 +30,7 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${ibmPlexArabic.variable} ${geistMono.variable} h-full antialiased`}
+      className={`${ibmPlexArabic.variable} ${geistMono.variable} ${thmanyahSans.variable} ${thmanyahSerifDisplay.variable} ${thmanyahSerifText.variable} h-full antialiased`}
       suppressHydrationWarning
     >
       <head>
