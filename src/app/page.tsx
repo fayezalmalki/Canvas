@@ -12,6 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { createCrawlStoragePlan } from "@/lib/crawl-storage";
+import { runGuardedConvexSave } from "@/lib/convex-save-error";
 import type { CrawlPageResult, CrawlResult } from "@/types/canvas";
 import {
   ArrowRight,
@@ -220,11 +221,17 @@ export default function Home() {
                   products: page.products ?? undefined,
                 })),
               });
-              const { crawlId, slug } = await createCrawl(plan.metadata);
+              const { crawlId, slug } = await runGuardedConvexSave(
+                () => createCrawl(plan.metadata),
+                locale
+              );
 
               for (const chunk of plan.pageChunks) {
                 if (chunk.length === 0) continue;
-                await addPagesToCrawl({ crawlId, pages: chunk });
+                await runGuardedConvexSave(
+                  () => addPagesToCrawl({ crawlId, pages: chunk }),
+                  locale
+                );
               }
 
               router.push(`/site/${slug}`);

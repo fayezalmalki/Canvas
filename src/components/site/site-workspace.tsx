@@ -10,6 +10,7 @@ import { useLocale } from "@/context/locale-context";
 import { useSiteContext } from "@/context/site-context";
 import { deduplicatePages } from "@/lib/dedup-pages";
 import { createCrawlStorageMetadata, createCrawlStoragePlan } from "@/lib/crawl-storage";
+import { getConvexSaveErrorMessage, runGuardedConvexSave } from "@/lib/convex-save-error";
 import { sitePageUrl } from "@/lib/navigation";
 import { scoreSeo } from "@/lib/seo-scorer";
 import { buildSiteWorkspaceSummary } from "@/lib/site-health-summary";
@@ -391,6 +392,7 @@ export function SiteWorkspace() {
   const [deepDiveTab, setDeepDiveTab] = useState<DeepDiveTab>("pages");
   const [continueCrawling, setContinueCrawling] = useState(false);
   const [continueProgress, setContinueProgress] = useState({ current: 0, total: 0 });
+  const [continueError, setContinueError] = useState("");
   const pages = useMemo(() => deduplicatePages(crawlResult?.pages ?? []), [crawlResult?.pages]);
   const summary = useMemo(() => (
     crawlResult ? buildSiteWorkspaceSummary(crawlResult) : null
@@ -413,6 +415,7 @@ export function SiteWorkspace() {
       return;
     }
 
+    setContinueError("");
     setContinueCrawling(true);
     setContinueProgress({ current: 0, total: Math.min(discoveredUrls.length, 50) });
 
@@ -479,21 +482,28 @@ export function SiteWorkspace() {
 
               for (const chunk of pagePlan.pageChunks) {
                 if (chunk.length === 0) continue;
-                await addPagesToCrawl({
-                  crawlId: crawlDocId as Id<"crawls">,
-                  pages: chunk,
-                });
+                await runGuardedConvexSave(
+                  () => addPagesToCrawl({
+                    crawlId: crawlDocId as Id<"crawls">,
+                    pages: chunk,
+                  }),
+                  locale
+                );
               }
             }
 
-            await updateCrawlMetadata({
-              crawlId: crawlDocId as Id<"crawls">,
-              ...createCrawlStorageMetadata(merged),
-            });
+            await runGuardedConvexSave(
+              () => updateCrawlMetadata({
+                crawlId: crawlDocId as Id<"crawls">,
+                ...createCrawlStorageMetadata(merged),
+              }),
+              locale
+            );
           }
         }
       }
     } catch (error) {
+      setContinueError(getConvexSaveErrorMessage(error, locale));
       console.error("Continue crawl failed:", error);
     } finally {
       setContinueCrawling(false);
@@ -608,6 +618,11 @@ export function SiteWorkspace() {
                 </Button>
               )}
             </div>
+            {continueError ? (
+              <p className="mt-3 text-sm leading-6 text-rose-600 dark:text-rose-400">
+                {continueError}
+              </p>
+            ) : null}
           </section>
         ) : null}
 
