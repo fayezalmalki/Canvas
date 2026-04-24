@@ -4,11 +4,12 @@ import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useMutation } from "convex/react";
 import { api } from "@convex/_generated/api";
+import type { Id } from "@convex/_generated/dataModel";
 import { useAudience } from "@/context/audience-context";
 import { useLocale } from "@/context/locale-context";
 import { useSiteContext } from "@/context/site-context";
 import { deduplicatePages } from "@/lib/dedup-pages";
-import { prepareCrawlForStorage } from "@/lib/crawl-storage";
+import { createCrawlStorageMetadata, createCrawlStoragePlan } from "@/lib/crawl-storage";
 import { sitePageUrl } from "@/lib/navigation";
 import { scoreSeo } from "@/lib/seo-scorer";
 import { buildSiteWorkspaceSummary } from "@/lib/site-health-summary";
@@ -384,7 +385,8 @@ export function SiteWorkspace() {
   const { audience } = useAudience();
   const { crawlId, crawlResult, discoveredUrls, setCrawlResult, setDiscoveredUrls } = useSiteContext();
   const copy = getWorkspaceCopy(locale, audience);
-  const storeCrawl = useMutation(api.crawls.storeCrawlResult);
+  const addPagesToCrawl = useMutation(api.crawls.addPagesToCrawl);
+  const updateCrawlMetadata = useMutation(api.crawls.updateCrawlMetadata);
   const [activeTab, setActiveTab] = useState<WorkspaceTab>("overview");
   const [deepDiveTab, setDeepDiveTab] = useState<DeepDiveTab>("pages");
   const [continueCrawling, setContinueCrawling] = useState(false);
@@ -405,6 +407,12 @@ export function SiteWorkspace() {
   async function handleContinueCrawl() {
     if (discoveredUrls.length === 0 || !crawlResult) return;
     const currentCrawl = crawlResult;
+    const crawlDocId = currentCrawl._id;
+    if (!crawlDocId) {
+      console.error("Continue crawl failed: missing crawl document id");
+      return;
+    }
+
     setContinueCrawling(true);
     setContinueProgress({ current: 0, total: Math.min(discoveredUrls.length, 50) });
 
@@ -452,17 +460,36 @@ export function SiteWorkspace() {
               ...currentCrawl,
               pages: [...currentCrawl.pages, ...newPages],
               discoveredUrls: event.result.discoveredUrls ?? [],
+              brokenLinks: event.result.brokenLinks ?? currentCrawl.brokenLinks ?? [],
+              redirectChains: event.result.redirectChains ?? currentCrawl.redirectChains ?? [],
               robotsSitemap: event.result.robotsSitemap ?? currentCrawl.robotsSitemap,
             };
 
             setCrawlResult(merged);
-            setDiscoveredUrls(event.result.discoveredUrls ?? []);
+            setDiscoveredUrls(merged.discoveredUrls);
 
-            await storeCrawl(prepareCrawlForStorage({
-              ...merged,
-              brokenLinks: event.result.brokenLinks ?? currentCrawl.brokenLinks ?? [],
-              redirectChains: event.result.redirectChains ?? currentCrawl.redirectChains ?? [],
-            }));
+            if (newPages.length > 0) {
+              const pagePlan = createCrawlStoragePlan({
+                rootUrl: currentCrawl.rootUrl,
+                pages: newPages,
+                discoveredUrls: [],
+                brokenLinks: [],
+                redirectChains: [],
+              });
+
+              for (const chunk of pagePlan.pageChunks) {
+                if (chunk.length === 0) continue;
+                await addPagesToCrawl({
+                  crawlId: crawlDocId as Id<"crawls">,
+                  pages: chunk,
+                });
+              }
+            }
+
+            await updateCrawlMetadata({
+              crawlId: crawlDocId as Id<"crawls">,
+              ...createCrawlStorageMetadata(merged),
+            });
           }
         }
       }

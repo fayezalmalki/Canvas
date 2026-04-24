@@ -1,4 +1,4 @@
-import { mutation, query } from "./_generated/server";
+import { mutation, query, type MutationCtx } from "./_generated/server";
 import { v } from "convex/values";
 
 const outgoingLinkValidator = v.object({
@@ -123,10 +123,88 @@ const pageValidator = v.object({
   botProtection: v.optional(v.string()),
 });
 
-export const storeCrawlResult = mutation({
+const crawlMetadataArgs = {
+  rootUrl: v.string(),
+  pagesCount: v.number(),
+  discoveredUrls: v.optional(v.array(v.string())),
+  brokenLinks: v.optional(v.array(v.object({
+    url: v.string(),
+    statusCode: v.number(),
+    referringPages: v.array(v.string()),
+  }))),
+  redirectChains: v.optional(v.array(v.object({
+    from: v.string(),
+    to: v.string(),
+    hops: v.number(),
+    statusCodes: v.array(v.number()),
+  }))),
+  robotsSitemap: v.optional(robotsSitemapValidator),
+};
+
+async function generateUniqueSlug(ctx: MutationCtx): Promise<string> {
+  const chars = "abcdefghijklmnopqrstuvwxyz0123456789";
+  let slug = "";
+  let attempts = 0;
+  do {
+    slug = Array.from({ length: 8 }, () => chars[Math.floor(Math.random() * chars.length)]).join("");
+    const existing = await ctx.db
+      .query("crawls")
+      .withIndex("by_slug", (q) => q.eq("slug", slug))
+      .first();
+    if (!existing) break;
+    attempts++;
+  } while (attempts < 5);
+
+  return slug;
+}
+
+export const createCrawl = mutation({
+  args: crawlMetadataArgs,
+  handler: async (ctx, args) => {
+    const slug = await generateUniqueSlug(ctx);
+
+    const crawlId = await ctx.db.insert("crawls", {
+      rootUrl: args.rootUrl,
+      slug,
+      pagesCount: args.pagesCount,
+      discoveredUrls: args.discoveredUrls ?? [],
+      brokenLinks: args.brokenLinks,
+      redirectChains: args.redirectChains,
+      robotsSitemap: args.robotsSitemap,
+      createdAt: Date.now(),
+    });
+
+    return { crawlId, slug };
+  },
+});
+
+export const addPagesToCrawl = mutation({
   args: {
-    rootUrl: v.string(),
+    crawlId: v.id("crawls"),
     pages: v.array(pageValidator),
+  },
+  handler: async (ctx, args) => {
+    for (const page of args.pages) {
+      await ctx.db.insert("pages", {
+        crawlId: args.crawlId,
+        url: page.url,
+        title: page.title,
+        screenshot: page.screenshot,
+        bodyText: page.bodyText,
+        outgoingLinks: page.outgoingLinks,
+        seo: page.seo,
+        products: page.products,
+        botProtection: page.botProtection,
+      });
+    }
+    return { inserted: args.pages.length };
+  },
+});
+
+export const updateCrawlMetadata = mutation({
+  args: {
+    crawlId: v.id("crawls"),
+    pagesCount: v.number(),
     discoveredUrls: v.optional(v.array(v.string())),
     brokenLinks: v.optional(v.array(v.object({
       url: v.string(),
@@ -142,24 +220,28 @@ export const storeCrawlResult = mutation({
     robotsSitemap: v.optional(robotsSitemapValidator),
   },
   handler: async (ctx, args) => {
-    // Generate a short unique slug (8 chars, alphanumeric)
-    const chars = "abcdefghijklmnopqrstuvwxyz0123456789";
-    let slug: string;
-    let attempts = 0;
-    do {
-      slug = Array.from({ length: 8 }, () => chars[Math.floor(Math.random() * chars.length)]).join("");
-      const existing = await ctx.db
-        .query("crawls")
-        .withIndex("by_slug", (q) => q.eq("slug", slug))
-        .first();
-      if (!existing) break;
-      attempts++;
-    } while (attempts < 5);
+    await ctx.db.patch(args.crawlId, {
+      pagesCount: args.pagesCount,
+      discoveredUrls: args.discoveredUrls ?? [],
+      brokenLinks: args.brokenLinks,
+      redirectChains: args.redirectChains,
+      robotsSitemap: args.robotsSitemap,
+    });
+    return { ok: true };
+  },
+});
 
+export const storeCrawlResult = mutation({
+  args: {
+    ...crawlMetadataArgs,
+    pages: v.array(pageValidator),
+  },
+  handler: async (ctx, args) => {
+    const slug = await generateUniqueSlug(ctx);
     const crawlId = await ctx.db.insert("crawls", {
       rootUrl: args.rootUrl,
       slug,
-      pagesCount: args.pages.length,
+      pagesCount: args.pagesCount,
       discoveredUrls: args.discoveredUrls ?? [],
       brokenLinks: args.brokenLinks,
       redirectChains: args.redirectChains,

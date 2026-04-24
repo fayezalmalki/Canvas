@@ -11,7 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
 import { ThemeToggle } from "@/components/theme-toggle";
-import { prepareCrawlForStorage } from "@/lib/crawl-storage";
+import { createCrawlStoragePlan } from "@/lib/crawl-storage";
 import type { CrawlPageResult, CrawlResult } from "@/types/canvas";
 import {
   ArrowRight,
@@ -131,7 +131,8 @@ export default function Home() {
   const { locale, setLocale } = useLocale();
   const { audience, setAudience } = useAudience();
   const copy = getHomeCopy(locale);
-  const storeCrawl = useMutation(api.crawls.storeCrawlResult);
+  const createCrawl = useMutation(api.crawls.createCrawl);
+  const addPagesToCrawl = useMutation(api.crawls.addPagesToCrawl);
   const recentCrawls = useQuery(api.crawls.listRecentCrawls);
   const [url, setUrl] = useState("");
   const [maxDepth, setMaxDepth] = useState(2);
@@ -211,14 +212,21 @@ export default function Home() {
                 discovered: event.discovered ?? 0,
               });
             } else if (event.type === "complete" && event.result) {
-              const slug = await storeCrawl(prepareCrawlForStorage({
+              const plan = createCrawlStoragePlan({
                 ...event.result,
                 rootUrl: normalizedUrl,
                 pages: event.result.pages.map((page: CrawlPageResult) => ({
                   ...page,
                   products: page.products ?? undefined,
                 })),
-              }));
+              });
+              const { crawlId, slug } = await createCrawl(plan.metadata);
+
+              for (const chunk of plan.pageChunks) {
+                if (chunk.length === 0) continue;
+                await addPagesToCrawl({ crawlId, pages: chunk });
+              }
+
               router.push(`/site/${slug}`);
               return;
             } else if (event.type === "error") {
