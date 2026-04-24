@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { prepareCrawlForStorage } from "@/lib/crawl-storage";
 import type { CrawlPageResult, CrawlResult } from "@/types/canvas";
 import {
   ArrowRight,
@@ -53,7 +54,7 @@ function getHomeCopy(locale: "en" | "ar") {
       brand: "بصيـــرة",
       subbrand: "Baseera",
       title: "اجعل موقعك أو متجرك أوضح لجوجل وأدوات الذكاء",
-      description: "بصيــرة تساعدك على فهم جاهزية الموقع للبحث، والقراءة من قبل LLMs، وجودة بيانات المتجر من دون تعقيد تقني.",
+      description: "اكتشف ما الذي قد يضعف ظهور موقعك في جوجل وأدوات الذكاء، وما الذي يحتاج إصلاحاً أولاً.",
       placeholder: "example.com",
       analyze: "ابدأ الفحص",
       crawling: "جارٍ الفحص...",
@@ -66,22 +67,22 @@ function getHomeCopy(locale: "en" | "ar") {
       discovered: "تم اكتشاف {total} رابط ({remaining} متبقية)",
       patience: "قد يستغرق الفحص بضع دقائق حسب حجم الموقع",
       recentSites: "آخر المواقع",
-      roleTitle: "لمن هذا التقرير؟",
+      roleTitle: "كيف ستستخدم بصيرة؟",
       roleOwner: "أنا أدير موقعي",
       roleConsultant: "أنا أراجع مواقع لعملاء",
-      roleOwnerHint: "سنشرح لك النتائج بلغة أوضح ونركز على الأولويات السريعة.",
-      roleConsultantHint: "سنحافظ على نفس البساطة لكن مع عرض أنسب للمراجعة والعرض على العملاء.",
+      roleOwnerHint: "ستحصل على قراءة واضحة لما يحتاج إصلاحاً أولاً، بدون الحاجة لخبرة تقنية عميقة.",
+      roleConsultantHint: "ستحصل على ملخص واضح يمكنك مراجعته سريعاً وشرحه للعملاء أو لفريقك بسهولة.",
       helpTitle: "ما الذي تساعدك عليه بصيرة",
       helpItems: [
-        "توضح ما الذي يضر الظهور والاكتشاف.",
-        "تفحص قابلية الموقع للقراءة من قبل LLMs والـ agents.",
-        "تكشف فجوات المحتوى والمتجر قبل أن تؤثر على النمو.",
+        "اعرف لماذا قد يكون موقعك صعب الاكتشاف.",
+        "تحقق هل تستطيع أدوات الذكاء فهم صفحاتك.",
+        "اكتشف مشكلات المحتوى أو المتجر قبل أن تؤثر على النتائج.",
       ],
-      helperTitle: "كيف تشرح التطبيق ببساطة؟",
-      helperText: "بصيــرة هي مساحة فحص موجّهة للمواقع: تبدأ بعنوان موقع، ثم تحصل على قراءة واضحة عن جاهزية الذكاء، وصحة الأرشفة، وجاهزية المتجر.",
-      upcomingTitle: "قدرات ستظهر في نفس المساحة لاحقاً",
-      upcomingTrack: "مراقبة المواقع والتنبيهات على التغييرات، الأسعار، وعودة المنتجات.",
-      upcomingCompetitors: "مقارنة المنافسين ومعرفة التحركات أو الفجوات المهمة.",
+      helperTitle: "ماذا ستحصل بعد إدخال رابط موقعك؟",
+      helperText: "نفحص الموقع، نوضح ما الذي يضعف ظهوره، ثم نرتب لك ما يجب إصلاحه أولاً في البحث وأدوات الذكاء وصفحات المتجر.",
+      upcomingTitle: "قريباً أيضاً",
+      upcomingTrack: "متابعة التغييرات المهمة في المواقع، مثل إطلاق المنتجات، تغيّر الأسعار، وعودة المخزون.",
+      upcomingCompetitors: "مراقبة المنافسين ومعرفة الفجوات أو التحركات التي تستحق الانتباه.",
       recentOpen: "فتح التقرير",
       justNow: "الآن",
     };
@@ -91,7 +92,7 @@ function getHomeCopy(locale: "en" | "ar") {
     brand: "بصيـــرة",
     subbrand: "Baseera",
     title: "Make your site easier for Google, AI tools, and shoppers to understand",
-    description: "Baseera gives you a guided read on AI visibility, indexing health, and ecommerce readiness without making the product hard to explain.",
+    description: "See what may be holding your site back in Google and AI tools, and what to fix first across your content and store pages.",
     placeholder: "example.com",
     analyze: "Start audit",
     crawling: "Analyzing...",
@@ -104,22 +105,22 @@ function getHomeCopy(locale: "en" | "ar") {
     discovered: "Discovered {total} URLs ({remaining} remaining)",
     patience: "This may take a few minutes depending on site size",
     recentSites: "Recent audits",
-    roleTitle: "Who are we optimizing this for?",
+    roleTitle: "How will you use Baseera?",
     roleOwner: "I run my own site",
     roleConsultant: "I audit sites for clients",
-    roleOwnerHint: "We’ll keep the guidance plain, focused, and action-first.",
-    roleConsultantHint: "We’ll keep the guidance client-friendly while preserving the deeper audit underneath.",
+    roleOwnerHint: "You’ll get a clear summary of what needs attention first, without needing deep technical SEO knowledge.",
+    roleConsultantHint: "You’ll get a fast, client-friendly summary you can review quickly and explain clearly to clients or teammates.",
     helpTitle: "What Baseera helps with",
     helpItems: [
-      "See what is hurting discoverability.",
-      "Check AI and LLM readability.",
-      "Spot store and content gaps early.",
+      "See why your site may be hard to find.",
+      "Check whether AI tools can understand your pages.",
+      "Catch content and store issues before they hurt results.",
     ],
-    helperTitle: "The simple product story",
-    helperText: "Baseera is a guided website health workspace. You start with one URL, then get a clear view of AI readiness, search/indexing health, and store quality.",
-    upcomingTitle: "Built to grow into the next layer",
-    upcomingTrack: "Tracking and alerts for launches, price changes, restocks, and important site updates.",
-    upcomingCompetitors: "Competitor monitoring and simple benchmarking against similar sites.",
+    helperTitle: "What you get after you enter your URL",
+    helperText: "Baseera scans your site, shows what may be hurting visibility, and points you to the fixes that matter first.",
+    upcomingTitle: "Coming soon",
+    upcomingTrack: "Track important site changes like launches, price changes, restocks, and major updates.",
+    upcomingCompetitors: "Monitor competitors and spot gaps or moves worth paying attention to.",
     recentOpen: "Open report",
     justNow: "just now",
   };
@@ -210,17 +211,14 @@ export default function Home() {
                 discovered: event.discovered ?? 0,
               });
             } else if (event.type === "complete" && event.result) {
-              const slug = await storeCrawl({
+              const slug = await storeCrawl(prepareCrawlForStorage({
+                ...event.result,
                 rootUrl: normalizedUrl,
                 pages: event.result.pages.map((page: CrawlPageResult) => ({
                   ...page,
                   products: page.products ?? undefined,
                 })),
-                discoveredUrls: event.result.discoveredUrls ?? [],
-                brokenLinks: event.result.brokenLinks ?? [],
-                redirectChains: event.result.redirectChains ?? [],
-                robotsSitemap: event.result.robotsSitemap ?? undefined,
-              });
+              }));
               router.push(`/site/${slug}`);
               return;
             } else if (event.type === "error") {

@@ -8,6 +8,7 @@ import { useAudience } from "@/context/audience-context";
 import { useLocale } from "@/context/locale-context";
 import { useSiteContext } from "@/context/site-context";
 import { deduplicatePages } from "@/lib/dedup-pages";
+import { prepareCrawlForStorage } from "@/lib/crawl-storage";
 import { sitePageUrl } from "@/lib/navigation";
 import { scoreSeo } from "@/lib/seo-scorer";
 import { buildSiteWorkspaceSummary } from "@/lib/site-health-summary";
@@ -457,14 +458,11 @@ export function SiteWorkspace() {
             setCrawlResult(merged);
             setDiscoveredUrls(event.result.discoveredUrls ?? []);
 
-            await storeCrawl({
-              rootUrl,
-              pages: merged.pages,
-              discoveredUrls: merged.discoveredUrls,
+            await storeCrawl(prepareCrawlForStorage({
+              ...merged,
               brokenLinks: event.result.brokenLinks ?? currentCrawl.brokenLinks ?? [],
               redirectChains: event.result.redirectChains ?? currentCrawl.redirectChains ?? [],
-              robotsSitemap: merged.robotsSitemap,
-            });
+            }));
           }
         }
       }
