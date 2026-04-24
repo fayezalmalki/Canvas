@@ -12,6 +12,7 @@ import type {
 } from "@/types/canvas";
 import { validateStructuredData } from "./schema-validator";
 import { extractProducts } from "./ecommerce-extractor";
+import { analyzeRobotsSitemap } from "./robots-sitemap";
 
 const BROWSER_USER_AGENT = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36";
 
@@ -328,6 +329,14 @@ export async function crawlSite(
     brokenLinks: [...brokenLinks.values()].filter((b) => b.referringPages.length > 0),
     redirectChains: redirectChains.filter((r) => r.hops > 0),
   };
+  try {
+    result.robotsSitemap = await analyzeRobotsSitemap(
+      startUrl,
+      pages.map((page) => page.url)
+    );
+  } catch (error: any) {
+    console.warn(`Failed to analyze robots/sitemap for ${startUrl}: ${error.message}`);
+  }
   onProgress?.({ type: "complete", result });
   return result;
 }
@@ -530,6 +539,14 @@ export async function crawlSpecificUrls(
     rootUrl,
     discoveredUrls: [],
   };
+  try {
+    result.robotsSitemap = await analyzeRobotsSitemap(
+      rootUrl,
+      pages.map((page) => page.url)
+    );
+  } catch (error: any) {
+    console.warn(`Failed to analyze robots/sitemap for ${rootUrl}: ${error.message}`);
+  }
   onProgress?.({ type: "complete", result });
   return result;
 }

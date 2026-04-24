@@ -3,6 +3,7 @@
 import { useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { useSiteContext } from "@/context/site-context";
+import { useAudience } from "@/context/audience-context";
 import { useLocale } from "@/context/locale-context";
 import { deduplicatePages } from "@/lib/dedup-pages";
 import { Button } from "@/components/ui/button";
@@ -34,6 +35,7 @@ import {
 export function SiteHeader({ onMobileMenuToggle }: { onMobileMenuToggle?: () => void }) {
   const router = useRouter();
   const { locale, setLocale, t, isRtl } = useLocale();
+  const { audience } = useAudience();
   const {
     crawlId,
     crawlResult,
@@ -50,6 +52,10 @@ export function SiteHeader({ onMobileMenuToggle }: { onMobileMenuToggle?: () => 
   }, [crawlResult]);
 
   const rootUrl = crawlResult?.rootUrl ?? "";
+  const advisorLabel = locale === "ar" ? "المرشد الذكي" : "Guided Advisor";
+  const audienceLabel = locale === "ar"
+    ? audience === "owner" ? "صاحب الموقع" : "وكالة"
+    : audience === "owner" ? "Owner" : "Agency";
   let domain = "";
   try {
     domain = new URL(rootUrl).hostname;
@@ -119,9 +125,14 @@ export function SiteHeader({ onMobileMenuToggle }: { onMobileMenuToggle?: () => 
       </button>
 
       {crawlResult && (
-        <span className="text-xs text-muted-foreground hidden sm:inline">
-          {pageCount} {t("header.pages")}
-        </span>
+        <div className="hidden items-center gap-2 sm:flex">
+          <span className="text-xs text-muted-foreground">
+            {pageCount} {t("header.pages")}
+          </span>
+          <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] font-medium text-muted-foreground">
+            {audienceLabel}
+          </span>
+        </div>
       )}
 
       <div className="ms-auto flex items-center gap-1.5">
@@ -180,11 +191,11 @@ export function SiteHeader({ onMobileMenuToggle }: { onMobileMenuToggle?: () => 
             render={<Button variant="outline" size="sm" />}
           >
             <MessageSquare className="h-4 w-4" />
-            <span className="hidden sm:inline">{t("header.seoAdvisor")}</span>
+            <span className="hidden sm:inline">{advisorLabel}</span>
           </SheetTrigger>
           <SheetContent side={isRtl ? "left" : "right"} className="w-full sm:w-[480px] sm:max-w-[480px] p-0 flex flex-col">
             <SheetHeader className="px-4 py-3 border-b border-border">
-              <SheetTitle className="text-sm font-semibold">{t("header.seoAdvisor")}</SheetTitle>
+              <SheetTitle className="text-sm font-semibold">{advisorLabel}</SheetTitle>
             </SheetHeader>
             <div className="flex-1 overflow-hidden">
               <SeoChat />

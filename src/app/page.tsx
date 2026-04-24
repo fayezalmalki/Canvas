@@ -4,24 +4,31 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
+import { useAudience } from "@/context/audience-context";
+import { useLocale } from "@/context/locale-context";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
-import { Badge } from "@/components/ui/badge";
 import { ThemeToggle } from "@/components/theme-toggle";
-import { useLocale } from "@/context/locale-context";
+import type { CrawlPageResult, CrawlResult } from "@/types/canvas";
 import {
-  Globe,
-  Loader2,
-  Search,
-  AlertCircle,
+  ArrowRight,
+  Bot,
   CheckCircle2,
   ChevronDown,
   ChevronUp,
   Clock,
-  FileText,
   ExternalLink,
+  Globe,
   Languages,
+  Loader2,
+  Radar,
+  Search,
+  ShoppingBag,
+  Sparkles,
+  Target,
+  TriangleAlert,
 } from "lucide-react";
 
 interface CrawledPage {
@@ -29,10 +36,102 @@ interface CrawledPage {
   title: string;
 }
 
+interface CrawlStreamEvent {
+  type: "page_crawled" | "complete" | "error";
+  url?: string;
+  title?: string;
+  index?: number;
+  total?: number;
+  discovered?: number;
+  result?: CrawlResult;
+  message?: string;
+}
+
+function getHomeCopy(locale: "en" | "ar") {
+  if (locale === "ar") {
+    return {
+      brand: "بصيـــرة",
+      subbrand: "Baseera",
+      title: "اجعل موقعك أو متجرك أوضح لجوجل وأدوات الذكاء",
+      description: "بصيــرة تساعدك على فهم جاهزية الموقع للبحث، والقراءة من قبل LLMs، وجودة بيانات المتجر من دون تعقيد تقني.",
+      placeholder: "example.com",
+      analyze: "ابدأ الفحص",
+      crawling: "جارٍ الفحص...",
+      advanced: "خيارات الفحص المتقدمة",
+      maxDepth: "أقصى عمق",
+      maxPages: "أقصى عدد صفحات",
+      screenshots: "التقاط صور للصفحات (أبطأ لكن يعطي معاينات بصرية)",
+      invalidUrl: "يرجى إدخال رابط صحيح",
+      progress: "تم فحص {current} من {total} صفحة",
+      discovered: "تم اكتشاف {total} رابط ({remaining} متبقية)",
+      patience: "قد يستغرق الفحص بضع دقائق حسب حجم الموقع",
+      recentSites: "آخر المواقع",
+      roleTitle: "لمن هذا التقرير؟",
+      roleOwner: "أنا أدير موقعي",
+      roleConsultant: "أنا أراجع مواقع لعملاء",
+      roleOwnerHint: "سنشرح لك النتائج بلغة أوضح ونركز على الأولويات السريعة.",
+      roleConsultantHint: "سنحافظ على نفس البساطة لكن مع عرض أنسب للمراجعة والعرض على العملاء.",
+      helpTitle: "ما الذي تساعدك عليه بصيرة",
+      helpItems: [
+        "توضح ما الذي يضر الظهور والاكتشاف.",
+        "تفحص قابلية الموقع للقراءة من قبل LLMs والـ agents.",
+        "تكشف فجوات المحتوى والمتجر قبل أن تؤثر على النمو.",
+      ],
+      helperTitle: "كيف تشرح التطبيق ببساطة؟",
+      helperText: "بصيــرة هي مساحة فحص موجّهة للمواقع: تبدأ بعنوان موقع، ثم تحصل على قراءة واضحة عن جاهزية الذكاء، وصحة الأرشفة، وجاهزية المتجر.",
+      upcomingTitle: "قدرات ستظهر في نفس المساحة لاحقاً",
+      upcomingTrack: "مراقبة المواقع والتنبيهات على التغييرات، الأسعار، وعودة المنتجات.",
+      upcomingCompetitors: "مقارنة المنافسين ومعرفة التحركات أو الفجوات المهمة.",
+      recentOpen: "فتح التقرير",
+      justNow: "الآن",
+    };
+  }
+
+  return {
+    brand: "بصيـــرة",
+    subbrand: "Baseera",
+    title: "Make your site easier for Google, AI tools, and shoppers to understand",
+    description: "Baseera gives you a guided read on AI visibility, indexing health, and ecommerce readiness without making the product hard to explain.",
+    placeholder: "example.com",
+    analyze: "Start audit",
+    crawling: "Analyzing...",
+    advanced: "Advanced crawl options",
+    maxDepth: "Max Depth",
+    maxPages: "Max Pages",
+    screenshots: "Capture page screenshots (slower, but adds visual previews)",
+    invalidUrl: "Please enter a valid URL",
+    progress: "Checked {current} of {total} pages",
+    discovered: "Discovered {total} URLs ({remaining} remaining)",
+    patience: "This may take a few minutes depending on site size",
+    recentSites: "Recent audits",
+    roleTitle: "Who are we optimizing this for?",
+    roleOwner: "I run my own site",
+    roleConsultant: "I audit sites for clients",
+    roleOwnerHint: "We’ll keep the guidance plain, focused, and action-first.",
+    roleConsultantHint: "We’ll keep the guidance client-friendly while preserving the deeper audit underneath.",
+    helpTitle: "What Baseera helps with",
+    helpItems: [
+      "See what is hurting discoverability.",
+      "Check AI and LLM readability.",
+      "Spot store and content gaps early.",
+    ],
+    helperTitle: "The simple product story",
+    helperText: "Baseera is a guided website health workspace. You start with one URL, then get a clear view of AI readiness, search/indexing health, and store quality.",
+    upcomingTitle: "Built to grow into the next layer",
+    upcomingTrack: "Tracking and alerts for launches, price changes, restocks, and important site updates.",
+    upcomingCompetitors: "Competitor monitoring and simple benchmarking against similar sites.",
+    recentOpen: "Open report",
+    justNow: "just now",
+  };
+}
+
 export default function Home() {
   const router = useRouter();
-  const { locale, setLocale, t } = useLocale();
+  const { locale, setLocale } = useLocale();
+  const { audience, setAudience } = useAudience();
+  const copy = getHomeCopy(locale);
   const storeCrawl = useMutation(api.crawls.storeCrawlResult);
+  const recentCrawls = useQuery(api.crawls.listRecentCrawls);
   const [url, setUrl] = useState("");
   const [maxDepth, setMaxDepth] = useState(2);
   const [maxPages, setMaxPages] = useState(20);
@@ -43,7 +142,10 @@ export default function Home() {
   const [crawlCount, setCrawlCount] = useState({ current: 0, total: 20, discovered: 0 });
   const [error, setError] = useState("");
   const [recentExpanded, setRecentExpanded] = useState(false);
-  const recentCrawls = useQuery(api.crawls.listRecentCrawls);
+
+  const progressPercent = crawlCount.total > 0
+    ? Math.round((crawlCount.current / crawlCount.total) * 100)
+    : 0;
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -54,13 +156,13 @@ export default function Home() {
     let normalizedUrl = url.trim();
     if (!normalizedUrl) return;
     if (!/^https?:\/\//i.test(normalizedUrl)) {
-      normalizedUrl = "https://" + normalizedUrl;
+      normalizedUrl = `https://${normalizedUrl}`;
     }
 
     try {
       new URL(normalizedUrl);
     } catch {
-      setError(t("home.invalidUrl"));
+      setError(copy.invalidUrl);
       return;
     }
 
@@ -96,288 +198,368 @@ export default function Home() {
           if (!line.startsWith("data: ")) continue;
           const data = line.slice(6);
           try {
-            const event = JSON.parse(data);
+            const event = JSON.parse(data) as CrawlStreamEvent;
 
-            if (event.type === "page_crawled") {
-              setCrawledPages((prev) => [
-                ...prev,
-                { url: event.url, title: event.title },
-              ]);
-              setCrawlCount({ current: event.index, total: event.total, discovered: event.discovered ?? 0 });
+            if (event.type === "page_crawled" && event.url) {
+              const pageUrl = event.url;
+              const pageTitle = event.title ?? pageUrl;
+              setCrawledPages((prev) => [...prev, { url: pageUrl, title: pageTitle }]);
+              setCrawlCount({
+                current: event.index ?? 0,
+                total: event.total ?? maxPages,
+                discovered: event.discovered ?? 0,
+              });
             } else if (event.type === "complete" && event.result) {
               const slug = await storeCrawl({
                 rootUrl: normalizedUrl,
-                pages: event.result.pages.map((p: any) => ({
-                  ...p,
-                  products: p.products ?? undefined,
+                pages: event.result.pages.map((page: CrawlPageResult) => ({
+                  ...page,
+                  products: page.products ?? undefined,
                 })),
                 discoveredUrls: event.result.discoveredUrls ?? [],
                 brokenLinks: event.result.brokenLinks ?? [],
                 redirectChains: event.result.redirectChains ?? [],
+                robotsSitemap: event.result.robotsSitemap ?? undefined,
               });
               router.push(`/site/${slug}`);
               return;
             } else if (event.type === "error") {
               throw new Error(event.message);
             }
-          } catch (parseErr: any) {
-            if (parseErr.message && parseErr.message !== "Unexpected end of JSON input") {
+          } catch (parseErr: unknown) {
+            if (parseErr instanceof Error && parseErr.message !== "Unexpected end of JSON input") {
               throw parseErr;
             }
           }
         }
       }
-    } catch (err: any) {
-      setError(err.message || "Something went wrong");
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Something went wrong");
       setCrawling(false);
     }
   }
 
-  const progressPercent =
-    crawlCount.total > 0
-      ? Math.round((crawlCount.current / crawlCount.total) * 100)
-      : 0;
-
   return (
-    <div className="flex min-h-full items-center justify-center p-4 relative">
-      <div className="absolute top-4 end-4 flex items-center gap-1.5">
-        <button
-          onClick={() => setLocale(locale === "en" ? "ar" : "en")}
-          className="inline-flex items-center justify-center rounded-md h-9 w-9 text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
-          title={locale === "en" ? "العربية" : "English"}
-        >
-          <Languages className="h-4 w-4" />
-        </button>
-        <ThemeToggle />
-      </div>
-      <div className="w-full max-w-lg space-y-8">
-        <div className="text-center space-y-3">
-          <h1 className="text-4xl font-bold tracking-tight text-gradient-brand">
-            {t("home.brand")}
-          </h1>
-          <p className="text-sm font-medium text-muted-foreground tracking-wide uppercase">
-            {t("home.brandSub")}
-          </p>
-          <p className="text-muted-foreground text-sm">
-            {t("home.description")}
-          </p>
+    <div className="min-h-full bg-[radial-gradient(circle_at_top_left,rgba(13,148,136,0.12),transparent_30%),radial-gradient(circle_at_85%_10%,rgba(217,119,6,0.13),transparent_24%),linear-gradient(180deg,rgba(255,255,255,0.96),rgba(247,248,249,1))] px-4 py-5 dark:bg-[radial-gradient(circle_at_top_left,rgba(13,148,136,0.18),transparent_30%),radial-gradient(circle_at_85%_10%,rgba(217,119,6,0.16),transparent_24%),linear-gradient(180deg,rgba(14,18,21,0.96),rgba(10,12,14,1))]">
+      <div className="mx-auto max-w-7xl space-y-6">
+        <div className="flex items-center justify-end gap-2">
+          <button
+            onClick={() => setLocale(locale === "en" ? "ar" : "en")}
+            className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-border/60 bg-card/80 text-muted-foreground transition-colors hover:text-foreground"
+            title={locale === "en" ? "العربية" : "English"}
+          >
+            <Languages className="h-4 w-4" />
+          </button>
+          <ThemeToggle />
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="relative">
-            <Search className="absolute start-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              value={url}
-              onChange={(e) => setUrl(e.target.value)}
-              placeholder={t("home.placeholder")}
-              className="h-12 ps-10 text-base font-mono"
-              disabled={crawling}
-              autoFocus
-            />
-          </div>
+        <section className="grid gap-6 lg:grid-cols-[1.15fr_0.85fr]">
+          <div className="rounded-[2rem] border border-border/70 bg-card/90 p-6 shadow-xl shadow-black/5 md:p-8">
+            <div className="mb-4 flex flex-wrap items-center gap-2">
+              <Badge variant="outline">{copy.subbrand}</Badge>
+              <Badge variant="outline">{audience === "owner" ? copy.roleOwner : copy.roleConsultant}</Badge>
+            </div>
+            <p className="text-sm font-medium uppercase tracking-[0.3em] text-muted-foreground">
+              {copy.brand}
+            </p>
+            <h1 className="mt-4 max-w-3xl font-heading text-4xl tracking-tight md:text-6xl">
+              {copy.title}
+            </h1>
+            <p className="mt-4 max-w-2xl text-base leading-8 text-muted-foreground">
+              {copy.description}
+            </p>
 
-          {/* Advanced toggle */}
-          {!crawling && (
-            <button
-              type="button"
-              onClick={() => setShowAdvanced(!showAdvanced)}
-              className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
-            >
-              {showAdvanced ? (
-                <ChevronUp className="h-3 w-3" />
-              ) : (
-                <ChevronDown className="h-3 w-3" />
-              )}
-              {t("home.advanced")}
-            </button>
-          )}
-
-          {showAdvanced && !crawling && (
-            <div className="space-y-3">
-              <div className="flex gap-4">
-                <div className="flex-1 space-y-1">
-                  <label className="text-xs text-muted-foreground">
-                    {t("home.maxDepth")}
-                  </label>
-                  <Input
-                    type="number"
-                    min={1}
-                    max={5}
-                    value={maxDepth}
-                    onChange={(e) => setMaxDepth(Number(e.target.value))}
-                    className="h-8 text-sm font-mono"
-                  />
-                </div>
-                <div className="flex-1 space-y-1">
-                  <label className="text-xs text-muted-foreground">
-                    {t("home.maxPages")}
-                  </label>
-                  <Input
-                    type="number"
-                    min={1}
-                    max={50}
-                    value={maxPages}
-                    onChange={(e) => setMaxPages(Number(e.target.value))}
-                    className="h-8 text-sm font-mono"
-                  />
-                </div>
+            <div className="mt-8 rounded-[1.75rem] bg-muted/45 p-5">
+              <div className="mb-3 flex items-center gap-2">
+                <Sparkles className="h-4 w-4 text-muted-foreground" />
+                <h2 className="font-semibold">{copy.helpTitle}</h2>
               </div>
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={screenshots}
-                  onChange={(e) => setScreenshots(e.target.checked)}
-                  className="h-3.5 w-3.5 rounded border-border accent-primary"
-                />
-                <span className="text-xs text-muted-foreground">
-                  {t("home.screenshots")}
-                </span>
-              </label>
-            </div>
-          )}
-
-          {error && (
-            <div className="flex items-center gap-2 rounded-lg border border-destructive/50 bg-destructive/10 px-3 py-2 text-sm text-destructive">
-              <AlertCircle className="h-4 w-4 shrink-0" />
-              {error}
-            </div>
-          )}
-
-          <Button
-            type="submit"
-            size="lg"
-            className="w-full h-11"
-            disabled={crawling || !url.trim()}
-          >
-            {crawling ? (
-              <>
-                <Loader2 className="h-4 w-4 animate-spin" />
-                {t("home.crawling")}
-              </>
-            ) : (
-              t("home.analyze")
-            )}
-          </Button>
-        </form>
-
-        {/* Live crawl progress */}
-        {crawling && (
-          <div className="space-y-3">
-            <div className="flex items-center justify-between text-sm">
-              <span className="text-muted-foreground">
-                {t("home.crawled", { current: crawlCount.current, total: crawlCount.total })}
-              </span>
-              <span className="font-mono text-xs text-muted-foreground">
-                {progressPercent}%
-              </span>
-            </div>
-            <Progress value={progressPercent} />
-
-            {crawlCount.discovered > crawlCount.current && (
-              <p className="text-xs text-muted-foreground">
-                {t("home.discovered", { total: crawlCount.discovered, remaining: crawlCount.discovered - crawlCount.current })}
-              </p>
-            )}
-
-            {crawledPages.length > 0 && (
-              <div className="max-h-48 overflow-y-auto rounded-lg border border-border bg-card p-2 space-y-1">
-                {crawledPages.map((page, i) => (
-                  <div
-                    key={i}
-                    className="flex items-center gap-2 text-xs py-0.5"
-                  >
-                    <CheckCircle2 className="h-3 w-3 text-emerald-500 shrink-0" />
-                    <span className="truncate">
-                      {page.title || page.url}
-                    </span>
-                    <span className="ms-auto text-muted-foreground/50 font-mono text-[10px] truncate max-w-[120px]">
-                      {new URL(page.url).pathname}
-                    </span>
+              <div className="grid gap-3 md:grid-cols-3">
+                {copy.helpItems.map((item) => (
+                  <div key={item} className="rounded-3xl border border-border/70 bg-background/80 p-4 text-sm leading-6 text-foreground/80">
+                    {item}
                   </div>
                 ))}
               </div>
-            )}
+            </div>
 
-            <p className="text-center text-xs text-muted-foreground">
-              {t("home.patience")}
-            </p>
-          </div>
-        )}
-
-        {/* Recent Sites */}
-        {!crawling && recentCrawls && recentCrawls.length > 0 && (
-          <div className="space-y-3">
-            <button
-              onClick={() => setRecentExpanded(!recentExpanded)}
-              className="flex w-full items-center gap-2 text-left"
-            >
-              <Clock className="h-4 w-4 text-muted-foreground" />
-              <h2 className="text-sm font-medium">{t("home.recentSites")}</h2>
-              <Badge variant="outline" className="text-[10px] px-1.5 py-0 ml-1">
-                {recentCrawls.length}
-              </Badge>
-              <div className="ms-auto">
-                {recentExpanded ? (
-                  <ChevronUp className="h-4 w-4 text-muted-foreground" />
-                ) : (
-                  <ChevronDown className="h-4 w-4 text-muted-foreground" />
-                )}
+            <div className="mt-6 grid gap-4 md:grid-cols-2">
+              <div className="rounded-[1.75rem] border border-border/70 bg-background/70 p-5">
+                <div className="mb-2 flex items-center gap-2">
+                  <Search className="h-4 w-4 text-muted-foreground" />
+                  <h2 className="font-semibold">{copy.helperTitle}</h2>
+                </div>
+                <p className="text-sm leading-7 text-muted-foreground">{copy.helperText}</p>
               </div>
-            </button>
-            {recentExpanded && <div className="space-y-2">
-              {recentCrawls.map((crawl) => {
-                let domain = "";
-                try {
-                  domain = new URL(crawl.rootUrl).hostname;
-                } catch {
-                  domain = crawl.rootUrl;
-                }
-                const totalDiscovered = crawl.pagesCount + crawl.discoveredCount;
-                const hasRemaining = crawl.discoveredCount > 0;
+              <div className="rounded-[1.75rem] border border-dashed border-border bg-background/70 p-5">
+                <div className="mb-2 flex items-center gap-2">
+                  <Radar className="h-4 w-4 text-muted-foreground" />
+                  <h2 className="font-semibold">{copy.upcomingTitle}</h2>
+                </div>
+                <div className="space-y-3 text-sm leading-7 text-muted-foreground">
+                  <p>{copy.upcomingTrack}</p>
+                  <p>{copy.upcomingCompetitors}</p>
+                </div>
+              </div>
+            </div>
+          </div>
 
-                return (
+          <div className="space-y-4">
+            <form onSubmit={handleSubmit} className="rounded-[2rem] border border-border/70 bg-card/95 p-6 shadow-xl shadow-black/5 md:p-7">
+              <div className="mb-5">
+                <div className="mb-2 flex items-center gap-2">
+                  <Target className="h-4 w-4 text-muted-foreground" />
+                  <h2 className="font-semibold">{copy.roleTitle}</h2>
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  {([
+                    { key: "owner", label: copy.roleOwner },
+                    { key: "consultant", label: copy.roleConsultant },
+                  ] as const).map((option) => (
+                    <button
+                      key={option.key}
+                      type="button"
+                      onClick={() => setAudience(option.key)}
+                      className={`rounded-2xl border px-4 py-3 text-sm transition-colors ${
+                        audience === option.key
+                          ? "border-primary bg-primary text-primary-foreground"
+                          : "border-border bg-background/70 text-foreground hover:border-primary/40"
+                      }`}
+                    >
+                      {option.label}
+                    </button>
+                  ))}
+                </div>
+                <p className="mt-3 text-sm leading-7 text-muted-foreground">
+                  {audience === "owner" ? copy.roleOwnerHint : copy.roleConsultantHint}
+                </p>
+              </div>
+
+              <div className="space-y-4">
+                <div className="relative">
+                  <Globe className="absolute start-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                  <Input
+                    value={url}
+                    onChange={(e) => setUrl(e.target.value)}
+                    placeholder={copy.placeholder}
+                    className="h-13 rounded-2xl border-border/70 bg-background/80 ps-10 text-base font-mono"
+                    disabled={crawling}
+                    autoFocus
+                  />
+                </div>
+
+                {!crawling ? (
                   <button
-                    key={crawl._id}
-                    onClick={() =>
-                      router.push(`/site/${crawl.slug ?? crawl._id}`)
-                    }
-                    className="flex w-full items-center gap-3 rounded-lg border border-border bg-card p-3 text-left transition-colors hover:border-primary/50"
+                    type="button"
+                    onClick={() => setShowAdvanced((prev) => !prev)}
+                    className="flex items-center gap-1 text-xs text-muted-foreground transition-colors hover:text-foreground"
                   >
-                    <Globe className="h-5 w-5 text-muted-foreground shrink-0" />
-                    <div className="flex-1 min-w-0">
-                      <div className="text-sm font-medium font-mono truncate">
-                        {domain}
+                    {showAdvanced ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
+                    {copy.advanced}
+                  </button>
+                ) : null}
+
+                {showAdvanced && !crawling ? (
+                  <div className="rounded-[1.5rem] bg-muted/45 p-4">
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="space-y-2">
+                        <label className="text-xs text-muted-foreground">{copy.maxDepth}</label>
+                        <Input
+                          type="number"
+                          min={1}
+                          max={5}
+                          value={maxDepth}
+                          onChange={(e) => setMaxDepth(Number(e.target.value))}
+                          className="h-9 rounded-xl bg-background/80 font-mono"
+                        />
                       </div>
-                      <div className="flex items-center gap-3 text-xs text-muted-foreground mt-0.5">
-                        <span className="flex items-center gap-1">
-                          <FileText className="h-3 w-3" />
-                          {crawl.pagesCount} {t("home.crawledCount")}
-                          {hasRemaining && (
-                            <span className="text-amber-500">
-                              / {totalDiscovered} {t("home.foundCount")}
-                            </span>
-                          )}
-                        </span>
-                        <span>
-                          {formatTimeAgo(crawl.createdAt)}
-                        </span>
+                      <div className="space-y-2">
+                        <label className="text-xs text-muted-foreground">{copy.maxPages}</label>
+                        <Input
+                          type="number"
+                          min={1}
+                          max={50}
+                          value={maxPages}
+                          onChange={(e) => setMaxPages(Number(e.target.value))}
+                          className="h-9 rounded-xl bg-background/80 font-mono"
+                        />
                       </div>
                     </div>
-                    <ExternalLink className="h-4 w-4 text-muted-foreground/50 shrink-0" />
-                  </button>
-                );
-              })}
-            </div>}
+                    <label className="mt-4 flex items-start gap-3 text-sm text-muted-foreground">
+                      <input
+                        type="checkbox"
+                        checked={screenshots}
+                        onChange={(e) => setScreenshots(e.target.checked)}
+                        className="mt-1 h-4 w-4 rounded border-border accent-primary"
+                      />
+                      <span>{copy.screenshots}</span>
+                    </label>
+                  </div>
+                ) : null}
+
+                {error ? (
+                  <div className="flex items-center gap-2 rounded-2xl border border-destructive/40 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+                    <TriangleAlert className="h-4 w-4 shrink-0" />
+                    {error}
+                  </div>
+                ) : null}
+
+                <Button type="submit" size="lg" className="h-12 w-full rounded-2xl" disabled={crawling || !url.trim()}>
+                  {crawling ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      {copy.crawling}
+                    </>
+                  ) : (
+                    <>
+                      {copy.analyze}
+                      <ArrowRight className="h-4 w-4" />
+                    </>
+                  )}
+                </Button>
+              </div>
+
+              {crawling ? (
+                <div className="mt-5 space-y-3">
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-muted-foreground">
+                      {copy.progress
+                        .replace("{current}", String(crawlCount.current))
+                        .replace("{total}", String(crawlCount.total))}
+                    </span>
+                    <span className="font-mono text-xs text-muted-foreground">{progressPercent}%</span>
+                  </div>
+                  <Progress value={progressPercent} />
+
+                  {crawlCount.discovered > crawlCount.current ? (
+                    <p className="text-xs text-muted-foreground">
+                      {copy.discovered
+                        .replace("{total}", String(crawlCount.discovered))
+                        .replace("{remaining}", String(crawlCount.discovered - crawlCount.current))}
+                    </p>
+                  ) : null}
+
+                  {crawledPages.length > 0 ? (
+                    <div className="max-h-56 space-y-1 overflow-y-auto rounded-[1.5rem] border border-border/70 bg-background/70 p-2.5">
+                      {crawledPages.map((page, index) => (
+                        <div key={`${page.url}-${index}`} className="flex items-center gap-2 rounded-xl px-2 py-1.5 text-xs">
+                          <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-emerald-500" />
+                          <span className="truncate">{page.title || page.url}</span>
+                          <span className="ms-auto max-w-[120px] truncate font-mono text-[10px] text-muted-foreground">
+                            {formatPath(page.url)}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  ) : null}
+
+                  <p className="text-center text-xs text-muted-foreground">{copy.patience}</p>
+                </div>
+              ) : null}
+            </form>
+
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="rounded-[1.75rem] border border-border/70 bg-card/90 p-5">
+                    <div className="mb-2 flex items-center gap-2">
+                      <Bot className="h-4 w-4 text-muted-foreground" />
+                  <h2 className="font-semibold">{locale === "ar" ? "الذكاء + السيو" : "AI + SEO"}</h2>
+                </div>
+                <p className="text-sm leading-7 text-muted-foreground">
+                  {locale === "ar"
+                    ? "ابدأ دائماً بفحص واحد موجّه، ثم انتقل إلى جاهزية الذكاء وصحة الأرشفة من نفس التقرير."
+                    : "Start with one guided audit, then move into AI readiness and indexing health from the same workspace."}
+                </p>
+              </div>
+              <div className="rounded-[1.75rem] border border-dashed border-border bg-card/90 p-5">
+                <div className="mb-2 flex items-center gap-2">
+                  <ShoppingBag className="h-4 w-4 text-muted-foreground" />
+                  <h2 className="font-semibold">{locale === "ar" ? "جاهز للمتاجر" : "Ecommerce aware"}</h2>
+                </div>
+                <p className="text-sm leading-7 text-muted-foreground">
+                  {locale === "ar"
+                    ? "إذا كان الموقع متجراً، يظهر لك قسم خاص يوضح جودة بيانات المنتجات وجاهزية الصفحات التجارية."
+                    : "If the site is a store, Baseera adds a product-focused view for catalog clarity and commerce data quality."}
+                </p>
+              </div>
+            </div>
           </div>
-        )}
+        </section>
+
+        {recentCrawls && recentCrawls.length > 0 ? (
+          <section className="rounded-[2rem] border border-border/70 bg-card/90 p-5 shadow-lg shadow-black/5">
+            <button
+              onClick={() => setRecentExpanded((prev) => !prev)}
+              className="flex w-full items-center gap-2 text-start"
+            >
+              <Clock className="h-4 w-4 text-muted-foreground" />
+              <h2 className="font-semibold">{copy.recentSites}</h2>
+              <Badge variant="outline">{recentCrawls.length}</Badge>
+              <span className="ms-auto text-muted-foreground">
+                {recentExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+              </span>
+            </button>
+
+            {recentExpanded ? (
+              <div className="mt-4 grid gap-3 lg:grid-cols-2">
+                {recentCrawls.map((crawl) => {
+                  const domain = formatDomain(crawl.rootUrl);
+                  const totalDiscovered = crawl.pagesCount + crawl.discoveredCount;
+                  const hasRemaining = crawl.discoveredCount > 0;
+
+                  return (
+                    <button
+                      key={crawl._id}
+                      onClick={() => router.push(`/site/${crawl.slug ?? crawl._id}`)}
+                      className="flex items-center gap-4 rounded-[1.5rem] border border-border/70 bg-background/70 p-4 text-start transition-colors hover:border-primary/40"
+                    >
+                      <div className="rounded-2xl bg-muted p-3">
+                        <Globe className="h-4 w-4 text-muted-foreground" />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="truncate font-mono text-sm font-medium">{domain}</div>
+                        <div className="mt-1 text-xs text-muted-foreground">
+                          {locale === "ar"
+                            ? `${crawl.pagesCount} صفحة مفحوصة${hasRemaining ? ` / ${totalDiscovered} مكتشفة` : ""}`
+                            : `${crawl.pagesCount} pages checked${hasRemaining ? ` / ${totalDiscovered} found` : ""}`}
+                        </div>
+                        <div className="mt-1 text-xs text-muted-foreground">{formatTimeAgo(crawl.createdAt, copy.justNow)}</div>
+                      </div>
+                      <div className="flex items-center gap-2 text-xs text-primary">
+                        <span>{copy.recentOpen}</span>
+                        <ExternalLink className="h-3.5 w-3.5" />
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            ) : null}
+          </section>
+        ) : null}
       </div>
     </div>
   );
 }
 
-function formatTimeAgo(timestamp: number): string {
+function formatPath(url: string): string {
+  try {
+    const path = new URL(url).pathname;
+    return path || "/";
+  } catch {
+    return url;
+  }
+}
+
+function formatDomain(url: string): string {
+  try {
+    return new URL(url).hostname;
+  } catch {
+    return url;
+  }
+}
+
+function formatTimeAgo(timestamp: number, justNowLabel: string): string {
   const seconds = Math.floor((Date.now() - timestamp) / 1000);
-  if (seconds < 60) return "just now";
+  if (seconds < 60) return justNowLabel;
   const minutes = Math.floor(seconds / 60);
   if (minutes < 60) return `${minutes}m ago`;
   const hours = Math.floor(minutes / 60);

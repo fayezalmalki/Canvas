@@ -1,6 +1,27 @@
 import { defineSchema, defineTable } from "convex/server";
 import { v } from "convex/values";
 
+const robotsSitemapValidator = v.object({
+  robotsTxt: v.object({
+    found: v.boolean(),
+    sitemapUrls: v.array(v.string()),
+    blockedPaths: v.array(v.string()),
+    issues: v.array(v.string()),
+  }),
+  sitemap: v.object({
+    found: v.boolean(),
+    urls: v.array(v.object({
+      loc: v.string(),
+      lastmod: v.optional(v.string()),
+    })),
+    issues: v.array(v.string()),
+  }),
+  coverage: v.object({
+    inSitemapNotCrawled: v.array(v.string()),
+    crawledNotInSitemap: v.array(v.string()),
+  }),
+});
+
 export default defineSchema({
   crawls: defineTable({
     rootUrl: v.string(),
@@ -18,6 +39,7 @@ export default defineSchema({
       hops: v.number(),
       statusCodes: v.array(v.number()),
     }))),
+    robotsSitemap: v.optional(robotsSitemapValidator),
     createdAt: v.number(),
   }).index("by_root_url", ["rootUrl"])
     .index("by_slug", ["slug"]),

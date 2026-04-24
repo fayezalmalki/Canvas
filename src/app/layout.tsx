@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { IBM_Plex_Sans_Arabic, Geist_Mono } from "next/font/google";
 import { thmanyahSans, thmanyahSerifDisplay, thmanyahSerifText } from "./fonts";
 import { ConvexClientProvider } from "@/components/convex-provider";
+import { AudienceProvider } from "@/context/audience-context";
 import { LocaleProvider } from "@/context/locale-context";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import "./globals.css";
@@ -19,7 +20,7 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "Baseera | بصيـــرة",
-  description: "Crawl, browse, and analyze your website's SEO, content, and products",
+  description: "Check AI visibility, search health, indexing gaps, and ecommerce readiness for any website.",
 };
 
 export default function RootLayout({
@@ -41,7 +42,9 @@ export default function RootLayout({
       <body className="h-full bg-background text-foreground">
         <ConvexClientProvider>
           <LocaleProvider>
-            <TooltipProvider>{children}</TooltipProvider>
+            <AudienceProvider>
+              <TooltipProvider>{children}</TooltipProvider>
+            </AudienceProvider>
           </LocaleProvider>
         </ConvexClientProvider>
       </body>

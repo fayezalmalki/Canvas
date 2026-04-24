@@ -91,6 +91,27 @@ const productValidator = v.object({
   ),
 });
 
+const robotsSitemapValidator = v.object({
+  robotsTxt: v.object({
+    found: v.boolean(),
+    sitemapUrls: v.array(v.string()),
+    blockedPaths: v.array(v.string()),
+    issues: v.array(v.string()),
+  }),
+  sitemap: v.object({
+    found: v.boolean(),
+    urls: v.array(v.object({
+      loc: v.string(),
+      lastmod: v.optional(v.string()),
+    })),
+    issues: v.array(v.string()),
+  }),
+  coverage: v.object({
+    inSitemapNotCrawled: v.array(v.string()),
+    crawledNotInSitemap: v.array(v.string()),
+  }),
+});
+
 const pageValidator = v.object({
   url: v.string(),
   title: v.string(),
@@ -118,6 +139,7 @@ export const storeCrawlResult = mutation({
       hops: v.number(),
       statusCodes: v.array(v.number()),
     }))),
+    robotsSitemap: v.optional(robotsSitemapValidator),
   },
   handler: async (ctx, args) => {
     // Generate a short unique slug (8 chars, alphanumeric)
@@ -141,6 +163,7 @@ export const storeCrawlResult = mutation({
       discoveredUrls: args.discoveredUrls ?? [],
       brokenLinks: args.brokenLinks,
       redirectChains: args.redirectChains,
+      robotsSitemap: args.robotsSitemap,
       createdAt: Date.now(),
     });
 
@@ -197,6 +220,7 @@ export const getCrawlBySlug = query({
       discoveredUrls: crawl.discoveredUrls ?? [],
       brokenLinks: crawl.brokenLinks ?? [],
       redirectChains: crawl.redirectChains ?? [],
+      robotsSitemap: crawl.robotsSitemap,
       createdAt: crawl.createdAt,
       pages: pages.map((p) => ({
         url: p.url,
@@ -234,6 +258,7 @@ export const getCrawlByUrl = query({
       discoveredUrls: crawl.discoveredUrls ?? [],
       brokenLinks: crawl.brokenLinks ?? [],
       redirectChains: crawl.redirectChains ?? [],
+      robotsSitemap: crawl.robotsSitemap,
       createdAt: crawl.createdAt,
       pages: pages.map((p) => ({
         url: p.url,

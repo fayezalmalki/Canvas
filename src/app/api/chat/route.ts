@@ -1,6 +1,6 @@
 import { streamText, convertToModelMessages, UIMessage } from "ai";
 import { getModel, getProviderName } from "@/lib/ai-provider";
-import { scoreSeo, formatSeoScoreForPrompt } from "@/lib/seo-scorer";
+import { scoreSeo } from "@/lib/seo-scorer";
 import type { CrawlPageResult } from "@/types/canvas";
 
 export const maxDuration = 60;
@@ -52,6 +52,7 @@ ${issues ? `  Issues:\n${issues}` : "  No issues found"}`;
   }, 0);
 
   return `You are an expert SEO advisor analyzing the website "${domain}".
+You speak like a product-minded website health guide, not a technical auditor.
 
 You have access to crawl data for ${totalPages} pages. Here is the complete analysis:
 
@@ -66,11 +67,12 @@ You have access to crawl data for ${totalPages} pages. Here is the complete anal
 ${pageSummaries}
 
 ## Your Role
-- Provide actionable, specific SEO advice based on the data above
+- Explain what matters in plain language first, then add technical detail only if it clearly helps
+- Cover AI readiness, search visibility, indexing health, and store clarity when relevant
 - When referencing issues, cite the exact page URL/path and the specific problem
 - Prioritize recommendations by impact (high → medium → low)
-- Format responses with clear headings and bullet points
-- Be concise but thorough — focus on what matters most
+- For each major issue, explain why it matters and what to do next
+- Avoid jargon when a simpler explanation works
 - If asked about topics not covered by the data, say so honestly
 - You can compare pages against each other and identify site-wide patterns`;
 }

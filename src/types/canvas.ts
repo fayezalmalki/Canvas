@@ -152,6 +152,41 @@ export interface Recommendation {
   description: string;
 }
 
+export interface PriorityAction {
+  id: string;
+  area: "overview" | "ai" | "search" | "store";
+  priority: "high" | "medium" | "low";
+  title: string;
+  whyItMatters: string;
+  howToFix: string;
+  affectedCount?: number;
+  metric?: string;
+}
+
+export interface SiteHealthSummary {
+  overallScore: number;
+  status: "strong" | "steady" | "at-risk";
+  summary: string;
+  strengths: string[];
+  topPriorities: PriorityAction[];
+  quickWins: PriorityAction[];
+  pagesAnalyzed: number;
+  averageSeoScore: number;
+  brokenLinksCount: number;
+  sitewideIssuesCount: number;
+}
+
+export interface AiReadinessSummary {
+  score: number;
+  summary: string;
+  extractablePageCount: number;
+  botProtectedPageCount: number;
+  structuredDataCoverage: number;
+  languageClarityCoverage: number;
+  llmReadabilityCoverage: number;
+  topPriorities: PriorityAction[];
+}
+
 export interface PageAnalysis {
   seoScore: number;
   seoIssues: SeoIssue[];

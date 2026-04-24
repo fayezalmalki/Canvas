@@ -11,7 +11,7 @@ import { UrlTree } from "./url-tree";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Folder, Search, FileText, ShoppingCart, Tag } from "lucide-react";
+import { Folder, Search, FileText, ShoppingCart, Radar, Target } from "lucide-react";
 import type { ProductData } from "@/types/canvas";
 
 type SidebarTab = "pages" | "products";
@@ -23,7 +23,7 @@ interface ProductWithPage extends ProductData {
 
 export function SiteSidebar({ onNavigate }: { onNavigate?: () => void } = {}) {
   const { crawlId, crawlResult } = useSiteContext();
-  const { t } = useLocale();
+  const { t, locale } = useLocale();
   const [search, setSearch] = useState("");
   const [tab, setTab] = useState<SidebarTab>("pages");
   const router = useRouter();
@@ -235,6 +235,32 @@ export function SiteSidebar({ onNavigate }: { onNavigate?: () => void } = {}) {
           )
         )}
       </ScrollArea>
+
+      <div className="border-t border-border p-3 space-y-2">
+        <div className="rounded-lg border border-dashed border-border bg-muted/30 p-3">
+          <div className="flex items-center gap-2 text-sm font-medium">
+            <Radar className="h-3.5 w-3.5 text-muted-foreground" />
+            {locale === "ar" ? "المراقبة" : "Monitoring"}
+          </div>
+          <p className="mt-1 text-[11px] leading-5 text-muted-foreground">
+            {locale === "ar"
+              ? "قريباً: تنبيهات على التغييرات، الإطلاقات، الأسعار، وعودة المخزون."
+              : "Coming soon: alerts for site changes, launches, prices, and restocks."}
+          </p>
+        </div>
+
+        <div className="rounded-lg border border-dashed border-border bg-muted/30 p-3">
+          <div className="flex items-center gap-2 text-sm font-medium">
+            <Target className="h-3.5 w-3.5 text-muted-foreground" />
+            {locale === "ar" ? "المنافسون" : "Competitors"}
+          </div>
+          <p className="mt-1 text-[11px] leading-5 text-muted-foreground">
+            {locale === "ar"
+              ? "قريباً: مقارنة الرسائل والفجوات مع مواقع مشابهة."
+              : "Coming soon: benchmark positioning and gaps against similar sites."}
+          </p>
+        </div>
+      </div>
     </div>
   );
 }
