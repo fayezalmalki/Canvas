@@ -27,6 +27,7 @@ import { InternalLinksPanel } from "@/components/site/internal-links-panel";
 import { ProductsPanel } from "@/components/site/products-panel";
 import {
   FixCard,
+  LinkRow,
   RoadmapPlaceholder,
   ScoreStat,
   SURFACE,
@@ -49,6 +50,7 @@ import {
   Compass,
   Gauge,
   Globe,
+  Link2,
   Loader2,
   Search,
   ShoppingBag,
@@ -113,6 +115,18 @@ function getWorkspaceCopy(locale: "en" | "ar", audience: "owner" | "consultant")
       aiRewrites: {
         title: "إعادة صياغة بالذكاء",
         description: "قريباً: عناوين وأوصاف مقترحة تلقائياً للصفحات الضعيفة.",
+      },
+      links: {
+        health: "صحة الروابط",
+        allClear: "لا توجد روابط مكسورة أو سلاسل تحويل.",
+        broken: "روابط مكسورة",
+        redirects: "تحويلات",
+        foundOn: (n: number) => `في ${n} صفحة`,
+        hops: (n: number) => `${n} تحويلة`,
+        more: (n: number) => `+${n} أخرى`,
+        sitemapMissing: "مفحوصة وغير موجودة في الخريطة",
+        sitemapUnreached: "في الخريطة ولم تُفحص",
+        botProtected: "صفحات محمية من الزحف",
       },
       priceStock: {
         title: "الأسعار والمخزون الآن",
@@ -228,6 +242,18 @@ function getWorkspaceCopy(locale: "en" | "ar", audience: "owner" | "consultant")
     aiRewrites: {
       title: "AI-written rewrites",
       description: "Coming soon: auto-suggested titles and descriptions for weak pages.",
+    },
+    links: {
+      health: "Link health",
+      allClear: "No broken links or redirect chains found.",
+      broken: "Broken links",
+      redirects: "Redirects",
+      foundOn: (n: number) => `on ${n} page${n === 1 ? "" : "s"}`,
+      hops: (n: number) => `${n} hop${n === 1 ? "" : "s"}`,
+      more: (n: number) => `+${n} more`,
+      sitemapMissing: "Crawled, missing from sitemap",
+      sitemapUnreached: "In sitemap, not reached",
+      botProtected: "Bot-protected pages",
     },
     priceStock: {
       title: "Price & stock today",
@@ -404,6 +430,9 @@ export function SiteWorkspace() {
 
   const rootUrl = crawlResult.rootUrl;
   const domain = formatDomain(rootUrl);
+  const brokenLinks = crawlResult.brokenLinks ?? [];
+  const redirectChains = crawlResult.redirectChains ?? [];
+  const botProtectedPages = pages.filter((page) => page.botProtection);
 
   async function handleContinueCrawl() {
     if (discoveredUrls.length === 0 || !crawlResult) return;
@@ -573,10 +602,7 @@ export function SiteWorkspace() {
 
         {/* Actions */}
         <section className="space-y-3">
-          <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
-            <h2 className="text-base font-semibold">{copy.prioritiesTitle}</h2>
-            <p className="text-sm text-muted-foreground">{copy.overviewIntro}</p>
-          </div>
+          <h2 className="text-base font-semibold">{copy.prioritiesTitle}</h2>
 
           {summary.health.topPriorities.length > 0 ? (
             <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
@@ -644,83 +670,171 @@ export function SiteWorkspace() {
           </TabsList>
 
           {/* Search & SEO */}
-          <TabsContent value="search" className="space-y-5 pt-4">
+          <TabsContent value="search" className="space-y-4 pt-4">
             <section className={SURFACE}>
-              <p className="text-sm leading-7 text-muted-foreground">{copy.searchIntro}</p>
-              <div className="mt-5 grid grid-cols-2 gap-3 md:grid-cols-4">
+              <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
                 <ScoreStat label={copy.metrics.metaCoverage} value={`${summary.search.metaCoverage}%`} icon={Search} tone={scoreTone(summary.search.metaCoverage)} bar={summary.search.metaCoverage} />
                 <ScoreStat label={copy.metrics.indexable} value={summary.search.indexablePages} icon={Globe} />
                 <ScoreStat label={copy.metrics.brokenLinks} value={summary.search.brokenLinksCount} icon={AlertTriangle} tone={summary.search.brokenLinksCount > 0 ? "text-rose-500" : undefined} />
                 <ScoreStat label={copy.metrics.sitemapCoverage} value={`${summary.search.sitemapCoverage}%`} icon={Compass} tone={scoreTone(summary.search.sitemapCoverage)} bar={summary.search.sitemapCoverage} />
               </div>
-              <p className="mt-4 text-sm leading-7 text-foreground/80">{summary.search.summary}</p>
+              <p className="mt-3 text-sm leading-6 text-muted-foreground">{summary.search.summary}</p>
             </section>
 
-            <section className="grid gap-4 xl:grid-cols-[1.2fr_1fr]">
-              <div className="space-y-4">
-                <h2 className="text-sm font-medium text-muted-foreground">{copy.guidedFixesTitle}</h2>
-                <div className="grid gap-4 xl:grid-cols-2">
-                  {summary.search.actions.map((action) => (
-                    <FixCard key={action.id} action={action} copy={copy} />
-                  ))}
+            <div className="grid gap-4 xl:grid-cols-[1.3fr_1fr]">
+              <section className={SURFACE}>
+                <div className="mb-3 flex items-center gap-2">
+                  <Link2 className="h-4 w-4 text-muted-foreground" />
+                  <h2 className="font-semibold">{copy.links.health}</h2>
+                  {brokenLinks.length + redirectChains.length > 0 ? (
+                    <Badge variant="outline" className="ms-auto">{brokenLinks.length + redirectChains.length}</Badge>
+                  ) : null}
                 </div>
-              </div>
+                {brokenLinks.length === 0 && redirectChains.length === 0 ? (
+                  <p className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <CheckCircle2 className="h-4 w-4 text-emerald-500" />
+                    {copy.links.allClear}
+                  </p>
+                ) : (
+                  <div className="space-y-4">
+                    {brokenLinks.length > 0 ? (
+                      <div>
+                        <div className="mb-1 text-xs font-medium text-muted-foreground">
+                          {copy.links.broken} ({brokenLinks.length})
+                        </div>
+                        <div className="-mx-2">
+                          {brokenLinks.slice(0, 6).map((link) => (
+                            <LinkRow
+                              key={link.url}
+                              href={link.url}
+                              label={link.url}
+                              badge={
+                                <span className="shrink-0 rounded bg-rose-500/10 px-1.5 py-0.5 text-[10px] font-semibold text-rose-500">
+                                  {link.statusCode}
+                                </span>
+                              }
+                              note={link.referringPages.length > 0 ? copy.links.foundOn(link.referringPages.length) : undefined}
+                            />
+                          ))}
+                        </div>
+                        {brokenLinks.length > 6 ? (
+                          <p className="px-2 pt-1 text-xs text-muted-foreground">{copy.links.more(brokenLinks.length - 6)}</p>
+                        ) : null}
+                      </div>
+                    ) : null}
 
-              <div className="space-y-4">
-                <div className={SURFACE}>
-                  <div className="mb-4 flex items-center gap-2">
-                    <Compass className="h-4 w-4 text-muted-foreground" />
-                    <h2 className="font-semibold">{copy.robotsTitle}</h2>
+                    {redirectChains.length > 0 ? (
+                      <div>
+                        <div className="mb-1 text-xs font-medium text-muted-foreground">
+                          {copy.links.redirects} ({redirectChains.length})
+                        </div>
+                        <div className="-mx-2">
+                          {redirectChains.slice(0, 6).map((chain) => (
+                            <LinkRow
+                              key={chain.from}
+                              href={chain.from}
+                              label={`${chain.from} → ${chain.to}`}
+                              note={copy.links.hops(chain.hops)}
+                            />
+                          ))}
+                        </div>
+                        {redirectChains.length > 6 ? (
+                          <p className="px-2 pt-1 text-xs text-muted-foreground">{copy.links.more(redirectChains.length - 6)}</p>
+                        ) : null}
+                      </div>
+                    ) : null}
                   </div>
-                  {crawlResult.robotsSitemap ? (
-                    <div className="space-y-3">
-                      <div className={SURFACE_SUBTLE}>
-                        <div className="text-sm font-medium">robots.txt</div>
-                        <p className="mt-1 text-xs leading-6 text-muted-foreground">
-                          {crawlResult.robotsSitemap.robotsTxt.issues[0] ?? copy.robotsGood}
-                        </p>
-                      </div>
-                      <div className={SURFACE_SUBTLE}>
-                        <div className="text-sm font-medium">sitemap.xml</div>
-                        <p className="mt-1 text-xs leading-6 text-muted-foreground">
-                          {crawlResult.robotsSitemap.sitemap.issues[0] ?? copy.robotsGood}
-                        </p>
-                      </div>
-                      <div className={`${SURFACE_SUBTLE} whitespace-pre-line text-xs leading-6 text-muted-foreground`}>
-                        {copy.sitemapCoverageNote(
-                          crawlResult.robotsSitemap.coverage.crawledNotInSitemap.length,
-                          crawlResult.robotsSitemap.coverage.inSitemapNotCrawled.length
-                        )}
-                      </div>
-                    </div>
-                  ) : (
-                    <p className="text-sm text-muted-foreground">{copy.robotsGood}</p>
-                  )}
-                </div>
+                )}
+              </section>
 
-                <RoadmapPlaceholder
-                  icon={Bot}
-                  title={copy.aiRewrites.title}
-                  description={copy.aiRewrites.description}
-                  badge={copy.comingSoon}
-                />
-              </div>
-            </section>
+              <section className={SURFACE}>
+                <div className="mb-3 flex items-center gap-2">
+                  <Compass className="h-4 w-4 text-muted-foreground" />
+                  <h2 className="font-semibold">{copy.robotsTitle}</h2>
+                </div>
+                {crawlResult.robotsSitemap ? (
+                  <div className="space-y-3">
+                    <div className={SURFACE_SUBTLE}>
+                      <div className="text-sm font-medium">robots.txt</div>
+                      <p className="mt-1 text-xs leading-6 text-muted-foreground">
+                        {crawlResult.robotsSitemap.robotsTxt.issues[0] ?? copy.robotsGood}
+                      </p>
+                    </div>
+                    <div className={SURFACE_SUBTLE}>
+                      <div className="text-sm font-medium">sitemap.xml</div>
+                      <p className="mt-1 text-xs leading-6 text-muted-foreground">
+                        {crawlResult.robotsSitemap.sitemap.issues[0] ?? copy.robotsGood}
+                      </p>
+                    </div>
+                    {crawlResult.robotsSitemap.coverage.crawledNotInSitemap.length > 0 ? (
+                      <div>
+                        <div className="mb-1 text-xs font-medium text-muted-foreground">
+                          {copy.links.sitemapMissing} ({crawlResult.robotsSitemap.coverage.crawledNotInSitemap.length})
+                        </div>
+                        <div className="-mx-2">
+                          {crawlResult.robotsSitemap.coverage.crawledNotInSitemap.slice(0, 5).map((url) => (
+                            <LinkRow key={url} href={url} label={url} />
+                          ))}
+                        </div>
+                      </div>
+                    ) : null}
+                    {crawlResult.robotsSitemap.coverage.inSitemapNotCrawled.length > 0 ? (
+                      <div>
+                        <div className="mb-1 text-xs font-medium text-muted-foreground">
+                          {copy.links.sitemapUnreached} ({crawlResult.robotsSitemap.coverage.inSitemapNotCrawled.length})
+                        </div>
+                        <div className="-mx-2">
+                          {crawlResult.robotsSitemap.coverage.inSitemapNotCrawled.slice(0, 5).map((url) => (
+                            <LinkRow key={url} href={url} label={url} />
+                          ))}
+                        </div>
+                      </div>
+                    ) : null}
+                  </div>
+                ) : (
+                  <p className="text-sm text-muted-foreground">{copy.robotsGood}</p>
+                )}
+              </section>
+            </div>
+
+            <RoadmapPlaceholder
+              icon={Bot}
+              title={copy.aiRewrites.title}
+              description={copy.aiRewrites.description}
+              badge={copy.comingSoon}
+            />
           </TabsContent>
 
           {/* AI Readiness */}
-          <TabsContent value="ai" className="space-y-5 pt-4">
+          <TabsContent value="ai" className="space-y-4 pt-4">
             <section className={SURFACE}>
-              <p className="text-sm leading-7 text-muted-foreground">{copy.aiIntro}</p>
-              <div className="mt-5 grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-5">
+              <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-5">
                 <ScoreStat label={copy.metrics.extractable} value={summary.ai.extractablePageCount} icon={Wrench} />
                 <ScoreStat label={copy.metrics.botProtected} value={summary.ai.botProtectedPageCount} icon={AlertTriangle} tone={summary.ai.botProtectedPageCount > 0 ? "text-rose-500" : undefined} />
                 <ScoreStat label={copy.metrics.structured} value={`${summary.ai.structuredDataCoverage}%`} icon={Briefcase} tone={scoreTone(summary.ai.structuredDataCoverage)} bar={summary.ai.structuredDataCoverage} />
                 <ScoreStat label={copy.metrics.language} value={`${summary.ai.languageClarityCoverage}%`} icon={Globe} tone={scoreTone(summary.ai.languageClarityCoverage)} bar={summary.ai.languageClarityCoverage} />
                 <ScoreStat label={copy.metrics.readability} value={`${summary.ai.llmReadabilityCoverage}%`} icon={Bot} tone={scoreTone(summary.ai.llmReadabilityCoverage)} bar={summary.ai.llmReadabilityCoverage} />
               </div>
-              <p className="mt-4 text-sm leading-7 text-foreground/80">{summary.ai.summary}</p>
+              <p className="mt-3 text-sm leading-6 text-muted-foreground">{summary.ai.summary}</p>
             </section>
+
+            {botProtectedPages.length > 0 ? (
+              <section className={SURFACE}>
+                <div className="mb-3 flex items-center gap-2">
+                  <AlertTriangle className="h-4 w-4 text-muted-foreground" />
+                  <h2 className="font-semibold">{copy.links.botProtected}</h2>
+                  <Badge variant="outline" className="ms-auto">{botProtectedPages.length}</Badge>
+                </div>
+                <div className="-mx-2">
+                  {botProtectedPages.slice(0, 6).map((page) => (
+                    <LinkRow key={page.url} href={page.url} label={page.url} note={page.botProtection} />
+                  ))}
+                </div>
+                {botProtectedPages.length > 6 ? (
+                  <p className="px-2 pt-1 text-xs text-muted-foreground">{copy.links.more(botProtectedPages.length - 6)}</p>
+                ) : null}
+              </section>
+            ) : null}
 
             <div className="grid gap-4 xl:grid-cols-3">
               {summary.ai.topPriorities.map((action) => (
@@ -732,19 +846,18 @@ export function SiteWorkspace() {
           {/* Catalog & Commerce */}
           <TabsContent value="commerce" className="space-y-5 pt-4">
             <section className={SURFACE}>
-              <p className="text-sm leading-7 text-muted-foreground">{copy.storeIntro}</p>
               {summary.store.productCount > 0 ? (
                 <>
-                  <div className="mt-5 grid grid-cols-2 gap-3 md:grid-cols-4">
+                  <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
                     <ScoreStat label={copy.metrics.products} value={summary.store.productCount} icon={ShoppingBag} />
                     <ScoreStat label={copy.metrics.catalogPages} value={summary.store.pagesWithProducts} icon={Globe} />
                     <ScoreStat label={copy.metrics.dataCoverage} value={`${summary.store.productDataCoverage}%`} icon={Gauge} tone={scoreTone(summary.store.productDataCoverage)} bar={summary.store.productDataCoverage} />
                     <ScoreStat label={copy.metrics.schemaCoverage} value={`${summary.store.schemaBackedCoverage}%`} icon={Briefcase} tone={scoreTone(summary.store.schemaBackedCoverage)} bar={summary.store.schemaBackedCoverage} />
                   </div>
-                  <p className="mt-4 text-sm leading-7 text-foreground/80">{summary.store.summary}</p>
+                  <p className="mt-3 text-sm leading-6 text-muted-foreground">{summary.store.summary}</p>
                 </>
               ) : (
-                <div className={`${DASHED} mt-4`}>
+                <div className={DASHED}>
                   <p className="text-sm font-medium">{copy.noStore}</p>
                   <p className="mt-2 text-sm leading-7 text-muted-foreground">{copy.noStoreHint}</p>
                 </div>

@@ -3,7 +3,7 @@
 import type { PriorityAction } from "@/types/canvas";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import { Sparkles } from "lucide-react";
+import { ExternalLink, Sparkles } from "lucide-react";
 import type { WorkspaceCopy } from "@/components/site/site-workspace";
 
 // Standardized calm surfaces — match the landing-page aesthetic:
@@ -83,6 +83,35 @@ export function FixCard({
       <p className="mt-2 text-sm leading-6 text-foreground/80">{action.howToFix}</p>
       <p className="mt-1.5 text-xs leading-5 text-muted-foreground">{action.whyItMatters}</p>
     </div>
+  );
+}
+
+// A highlighted, clickable link row — surfaces a real URL next to a metric/fix.
+export function LinkRow({
+  href,
+  label,
+  badge,
+  note,
+}: {
+  href: string;
+  label: string;
+  badge?: React.ReactNode;
+  note?: string;
+}) {
+  return (
+    <a
+      href={href}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="group flex items-center gap-2 rounded-lg px-2 py-1.5 transition-colors hover:bg-muted/60"
+    >
+      {badge}
+      <span dir="ltr" className="min-w-0 flex-1 truncate font-mono text-xs text-primary group-hover:underline">
+        {label}
+      </span>
+      {note ? <span className="shrink-0 text-[11px] text-muted-foreground">{note}</span> : null}
+      <ExternalLink className="h-3 w-3 shrink-0 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100" />
+    </a>
   );
 }
 
