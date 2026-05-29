@@ -14,9 +14,10 @@ import { getConvexSaveErrorMessage, runGuardedConvexSave } from "@/lib/convex-sa
 import { sitePageUrl } from "@/lib/navigation";
 import { scoreSeo } from "@/lib/seo-scorer";
 import { buildSiteWorkspaceSummary } from "@/lib/site-health-summary";
-import type { CrawlPageResult, CrawlResult, PriorityAction } from "@/types/canvas";
+import type { CrawlPageResult, CrawlResult } from "@/types/canvas";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { StatusBadge } from "@/components/ui/status-badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { BrokenLinksPanel } from "@/components/site/broken-links-panel";
 import { ContentIssuesPanel } from "@/components/site/content-issues-panel";
@@ -25,25 +26,38 @@ import { ImagesPanel } from "@/components/site/images-panel";
 import { InternalLinksPanel } from "@/components/site/internal-links-panel";
 import { ProductsPanel } from "@/components/site/products-panel";
 import {
+  FixCard,
+  RoadmapPlaceholder,
+  ScoreStat,
+  SURFACE,
+  SURFACE_SUBTLE,
+  DASHED,
+} from "@/components/site/workspace-cards";
+import {
+  CompetitorsModule,
+  MonitoringModule,
+  PriceStockModule,
+  WORKSPACE_MODULES,
+  type WorkspaceModuleId,
+} from "@/components/site/capability-modules";
+import {
   AlertTriangle,
   Bot,
   Briefcase,
+  CheckCircle2,
   ChevronRight,
   Compass,
   Gauge,
   Globe,
   Loader2,
-  Radar,
   Search,
   ShoppingBag,
-  Sparkles,
-  Target,
-  TrendingUp,
   Wrench,
 } from "lucide-react";
 
-type WorkspaceTab = "overview" | "ai" | "search" | "store" | "deep-dive";
 type DeepDiveTab = "pages" | "content" | "link-health" | "internal" | "external" | "images" | "products";
+
+export type WorkspaceCopy = ReturnType<typeof getWorkspaceCopy>;
 
 function getWorkspaceCopy(locale: "en" | "ar", audience: "owner" | "consultant") {
   if (locale === "ar") {
@@ -52,18 +66,13 @@ function getWorkspaceCopy(locale: "en" | "ar", audience: "owner" | "consultant")
       assistantSummary: audience === "owner"
         ? "نرتب لك الأولويات بلغة واضحة حتى تعرف ما الذي يؤثر على ظهور موقعك في جوجل وأدوات الذكاء."
         : "نرتب النتائج كمسار مراجعة سريع يمكنك استخدامه مع العملاء أو الفرق الداخلية دون إغراق تقني.",
-      helpsTitle: "ما الذي تساعدك عليه بصيرة",
-      helpsItems: [
-        "توضح أين يفقد الموقع فرص الظهور في البحث وأدوات الذكاء.",
-        "تفحص جاهزية الصفحات للقراءة من قبل LLMs والعناكب والـ agents.",
-        "تكشف فجوات المتجر والمحتوى التي تؤثر على الفهم والاستخراج.",
-      ],
       modules: {
-        overview: "الملخص",
+        search: "البحث و SEO",
         ai: "جاهزية الذكاء",
-        search: "البحث والأرشفة",
-        store: "جاهزية المتجر",
-        deepDive: "تفاصيل متقدمة",
+        commerce: "الكتالوج والمتجر",
+        monitoring: "المراقبة",
+        competitors: "المنافسون",
+        pages: "الصفحات",
       },
       summaryCards: {
         overall: "الصحة العامة",
@@ -72,12 +81,14 @@ function getWorkspaceCopy(locale: "en" | "ar", audience: "owner" | "consultant")
         store: "جاهزية المتجر",
         pages: "الصفحات المفحوصة",
       },
-    prioritiesTitle: "أهم 3 أولويات الآن",
+      overviewIntro: "القراءة السريعة: أين الوضع جيد، وما الذي يجب إصلاحه أولاً.",
+      prioritiesTitle: "أهم الأولويات الآن",
       quickWinsTitle: "خطوات سريعة سهلة",
       strengthsTitle: "ما الذي يعمل بشكل جيد",
+      prioritiesEmpty: "لا توجد إشارات حرجة حالياً. يمكن التركيز على التحسينات السريعة والتحسين المستمر.",
       whyItMatters: "لماذا هذا مهم",
       howToFix: "كيف تصلحه",
-      overviewIntro: "هذه هي القراءة السريعة للموقع: أين الوضع جيد، وأين تبدأ الإصلاح.",
+      guidedFixesTitle: "إصلاحات موجهة",
       aiIntro: "نفحص هنا هل تستطيع أنظمة الذكاء قراءة الموقع وفهمه والوصول إلى محتواه المهم.",
       searchIntro: "هذا القسم يشرح ما الذي قد يربك جوجل أو يضعف الزحف والأرشفة.",
       storeIntro: "إذا كان الموقع تجارياً، فهذا القسم يوضح مدى وضوح بيانات المنتجات للتجربة والبحث والأدوات الذكية.",
@@ -99,13 +110,54 @@ function getWorkspaceCopy(locale: "en" | "ar", audience: "owner" | "consultant")
       },
       robotsTitle: "إشارات robots.txt و sitemap",
       robotsGood: "لا توجد إشارات حرجة ظاهرة هنا.",
-      trackTitle: "المراقبة والتنبيهات",
-      trackDescription: "قريباً: متابعة تغييرات المواقع، إطلاق المنتجات، تغيّر الأسعار، وعودة المخزون.",
-      competitorsTitle: "المنافسون",
-      competitorsDescription: "قريباً: مقارنة المؤشرات والرسائل ونقاط الضعف مع مواقع مشابهة.",
+      aiRewrites: {
+        title: "إعادة صياغة بالذكاء",
+        description: "قريباً: عناوين وأوصاف مقترحة تلقائياً للصفحات الضعيفة.",
+      },
+      priceStock: {
+        title: "الأسعار والمخزون الآن",
+        inStock: "متوفر",
+        outOfStock: "غير متوفر",
+        onSale: "عليه خصم",
+        priceRange: "نطاق السعر",
+        topDiscounts: "أعلى الخصومات",
+      },
+      priceHistory: {
+        title: "سجل الأسعار والتنبيهات",
+        description: "قريباً: نتتبّع تغيّر الأسعار وعودة المخزون انطلاقاً من هذا الفحص.",
+        points: [
+          "كشف انخفاض الأسعار وارتفاعها",
+          "تنبيهات عند عودة المنتج للمخزون",
+          "رسم بياني لتاريخ الأسعار",
+        ],
+      },
+      monitoring: {
+        intro: "نلتقط هنا حالة الموقع الحالية كنقطة انطلاق لمتابعة التغييرات.",
+        baseline: "تم التقاط نقطة الأساس.",
+        baselineNote: (n: number) => `${n} صفحة محفوظة كأساس للمقارنة في الفحوصات القادمة.`,
+        title: "تتبّع تغييرات المحتوى",
+        description: "قريباً: نراقب التغييرات المهمة منذ هذا الفحص.",
+        points: [
+          "كشف تغيّر المحتوى والأسعار والمخزون",
+          "تنبيهات عبر البريد أو داخل التطبيق",
+          "سجل زمني لكل التغييرات",
+        ],
+      },
+      competitors: {
+        title: "مقارنة المنافسين",
+        description: "قريباً: قارن موقعك مع مواقع مشابهة جنباً إلى جنب.",
+        points: [
+          "مقارنة الدرجات جنباً إلى جنب",
+          "تغطية البيانات المنظمة وحجم الكتالوج",
+          "تموضع الأسعار وفجوات المحتوى",
+        ],
+        addLabel: "أضف منافساً",
+        addPlaceholder: "أضف رابط منافس",
+      },
       comingSoon: "قريباً",
       continueCrawl: "فحص الصفحات المتبقية",
       moreDiscovered: "هناك صفحات إضافية مكتشفة لم تُفحص بعد",
+      remainingNote: "رابطاً إضافياً ما زال بانتظار الفحص.",
       deepDiveTabs: {
         pages: "الصفحات",
         content: "المحتوى",
@@ -118,12 +170,10 @@ function getWorkspaceCopy(locale: "en" | "ar", audience: "owner" | "consultant")
       openPage: "فتح الصفحة",
       noStore: "لم يتم اكتشاف كتالوج منتجات واضح في هذا الفحص.",
       noStoreHint: "إذا كان هذا موقعاً تجارياً، جرّب زيادة عمق الفحص أو مراجعة قوالب صفحات المنتجات.",
-    prioritiesEmpty: "لا توجد إشارات حرجة حالياً. يمكن التركيز على التحسينات السريعة والتحسين المستمر.",
-    priorityLabels: { high: "عالية", medium: "متوسطة", low: "منخفضة" },
-    statusLabels: { strong: "قوي", steady: "مستقر", "at-risk": "يحتاج عناية" },
-    remainingNote: "رابطاً إضافياً ما زال بانتظار الفحص.",
-    sitemapCoverageNote: (a: number, b: number) => `${a} روابط مفحوصة غير موجودة في الخريطة\n${b} روابط في الخريطة لم نصل لها في هذا الفحص`,
-  };
+      priorityLabels: { high: "عالية", medium: "متوسطة", low: "منخفضة" },
+      statusLabels: { strong: "قوي", steady: "مستقر", "at-risk": "يحتاج عناية" },
+      sitemapCoverageNote: (a: number, b: number) => `${a} روابط مفحوصة غير موجودة في الخريطة\n${b} روابط في الخريطة لم نصل لها في هذا الفحص`,
+    };
   }
 
   return {
@@ -131,18 +181,13 @@ function getWorkspaceCopy(locale: "en" | "ar", audience: "owner" | "consultant")
     assistantSummary: audience === "owner"
       ? "We keep the guidance plain and action-first so you can see what is hurting visibility without getting buried in technical detail."
       : "We keep the report client-friendly so you can explain what matters fast, then move into the deeper audit when needed.",
-    helpsTitle: "What this app helps with",
-    helpsItems: [
-      "Shows what is hurting discoverability in search and AI tools.",
-      "Checks whether LLMs, crawlers, and agents can read and reach key pages.",
-      "Finds content and store gaps that weaken extraction, indexing, and trust.",
-    ],
     modules: {
-      overview: "Overview",
+      search: "Search & SEO",
       ai: "AI Readiness",
-      search: "Search & Indexing",
-      store: "Store Readiness",
-      deepDive: "Deep Dive",
+      commerce: "Catalog & Commerce",
+      monitoring: "Monitoring",
+      competitors: "Competitors",
+      pages: "Pages",
     },
     summaryCards: {
       overall: "Overall Health",
@@ -151,12 +196,14 @@ function getWorkspaceCopy(locale: "en" | "ar", audience: "owner" | "consultant")
       store: "Store Readiness",
       pages: "Pages Analyzed",
     },
-    prioritiesTitle: "Top 3 priorities right now",
+    overviewIntro: "The fast read: what looks healthy, and what to fix first.",
+    prioritiesTitle: "Top priorities right now",
     quickWinsTitle: "Quick wins",
     strengthsTitle: "What is already working",
+    prioritiesEmpty: "No urgent blockers stand out right now. Focus on polish and incremental improvements.",
     whyItMatters: "Why this matters",
     howToFix: "How to fix it",
-    overviewIntro: "This is the fast read: what looks healthy, what is blocking visibility, and where to start.",
+    guidedFixesTitle: "Guided fixes",
     aiIntro: "This section focuses on whether AI systems can reach, read, and understand your most important pages.",
     searchIntro: "This section explains what may confuse Google, slow crawling, or weaken indexing signals.",
     storeIntro: "For ecommerce sites, this section shows how clearly products are exposed to search engines, AI tools, and future monitoring.",
@@ -178,13 +225,54 @@ function getWorkspaceCopy(locale: "en" | "ar", audience: "owner" | "consultant")
     },
     robotsTitle: "robots.txt and sitemap signals",
     robotsGood: "No major crawl-control issues stand out here.",
-    trackTitle: "Tracking & alerts",
-    trackDescription: "Coming soon: watch websites for launches, price moves, restocks, and important changes.",
-    competitorsTitle: "Competitor watch",
-    competitorsDescription: "Coming soon: compare positioning, technical gaps, and market movement against similar sites.",
+    aiRewrites: {
+      title: "AI-written rewrites",
+      description: "Coming soon: auto-suggested titles and descriptions for weak pages.",
+    },
+    priceStock: {
+      title: "Price & stock today",
+      inStock: "In stock",
+      outOfStock: "Out of stock",
+      onSale: "On sale",
+      priceRange: "Price range",
+      topDiscounts: "Biggest discounts",
+    },
+    priceHistory: {
+      title: "Price history & alerts",
+      description: "Coming soon: track price moves and restocks starting from this crawl.",
+      points: [
+        "Price drop and increase detection",
+        "Back-in-stock alerts",
+        "Price history charts",
+      ],
+    },
+    monitoring: {
+      intro: "This captures the site's current state as a baseline for tracking changes over time.",
+      baseline: "Baseline captured.",
+      baselineNote: (n: number) => `${n} pages saved as the baseline for future crawls to compare against.`,
+      title: "Content-change tracking",
+      description: "Coming soon: watch for meaningful changes since this crawl.",
+      points: [
+        "Content, price, and stock change detection",
+        "Email or in-app alerts",
+        "A timeline of every change",
+      ],
+    },
+    competitors: {
+      title: "Competitor benchmarking",
+      description: "Coming soon: compare your site side by side with similar ones.",
+      points: [
+        "Side-by-side scores",
+        "Structured-data coverage and catalog size",
+        "Price positioning and content gaps",
+      ],
+      addLabel: "Add a competitor",
+      addPlaceholder: "Add a competitor URL",
+    },
     comingSoon: "Coming soon",
     continueCrawl: "Crawl remaining pages",
     moreDiscovered: "More pages were discovered and are still waiting to be checked.",
+    remainingNote: "extra URLs are still waiting to be checked.",
     deepDiveTabs: {
       pages: "Pages",
       content: "Content",
@@ -197,10 +285,8 @@ function getWorkspaceCopy(locale: "en" | "ar", audience: "owner" | "consultant")
     openPage: "Open page",
     noStore: "No clear product catalog was detected in this crawl.",
     noStoreHint: "If this is an ecommerce site, try a deeper crawl or review how product pages are exposed.",
-    prioritiesEmpty: "No urgent blockers stand out right now. Focus on polish and incremental improvements.",
     priorityLabels: { high: "High", medium: "Medium", low: "Low" },
     statusLabels: { strong: "Strong", steady: "Steady", "at-risk": "At risk" },
-    remainingNote: "extra URLs are still waiting to be checked.",
     sitemapCoverageNote: (a: number, b: number) => `${a} crawled URLs missing from sitemap\n${b} sitemap URLs not reached in this crawl`,
   };
 }
@@ -209,6 +295,12 @@ function scoreTone(score: number) {
   if (score >= 80) return "text-emerald-500";
   if (score >= 55) return "text-amber-500";
   return "text-rose-500";
+}
+
+function healthStatusTone(status: "strong" | "steady" | "at-risk"): "success" | "info" | "warning" {
+  if (status === "strong") return "success";
+  if (status === "at-risk") return "warning";
+  return "info";
 }
 
 function formatDomain(rootUrl: string) {
@@ -226,99 +318,6 @@ function formatPath(url: string) {
   } catch {
     return url;
   }
-}
-
-function MetricCard({
-  label,
-  value,
-  note,
-  icon: Icon,
-  tone,
-}: {
-  label: string;
-  value: string | number;
-  note?: string;
-  icon: React.ComponentType<{ className?: string }>;
-  tone?: string;
-}) {
-  return (
-    <div className="rounded-3xl border border-border/70 bg-card/90 p-4 shadow-sm shadow-black/5">
-      <div className="mb-3 flex items-center gap-2 text-xs text-muted-foreground">
-        <Icon className="h-3.5 w-3.5" />
-        <span>{label}</span>
-      </div>
-      <div className={`text-2xl font-semibold ${tone ?? ""}`}>{value}</div>
-      {note ? <p className="mt-1 text-xs text-muted-foreground">{note}</p> : null}
-    </div>
-  );
-}
-
-function ActionCard({
-  action,
-  copy,
-}: {
-  action: PriorityAction;
-  copy: ReturnType<typeof getWorkspaceCopy>;
-}) {
-  return (
-    <div className="rounded-3xl border border-border/70 bg-card/95 p-5 shadow-sm shadow-black/5">
-      <div className="mb-4 flex items-start justify-between gap-3">
-        <div>
-          <Badge variant={action.priority === "high" ? "default" : action.priority === "medium" ? "secondary" : "outline"}>
-            {copy.priorityLabels[action.priority]}
-          </Badge>
-          <h3 className="mt-3 text-base font-semibold">{action.title}</h3>
-        </div>
-        {action.metric ? (
-          <span className="rounded-full bg-muted px-2.5 py-1 text-[11px] font-medium text-muted-foreground">
-            {action.metric}
-          </span>
-        ) : null}
-      </div>
-
-      <div className="space-y-4">
-        <div>
-          <div className="mb-1 text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">
-            {copy.whyItMatters}
-          </div>
-          <p className="text-sm leading-6 text-foreground/80">{action.whyItMatters}</p>
-        </div>
-        <div>
-          <div className="mb-1 text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">
-            {copy.howToFix}
-          </div>
-          <p className="text-sm leading-6 text-foreground/80">{action.howToFix}</p>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function TeaserCard({
-  title,
-  description,
-  icon: Icon,
-  badge,
-}: {
-  title: string;
-  description: string;
-  icon: React.ComponentType<{ className?: string }>;
-  badge: string;
-}) {
-  return (
-    <div className="rounded-[2rem] border border-dashed border-border bg-card/70 p-5">
-      <div className="mb-3 flex items-center gap-3">
-        <div className="rounded-2xl bg-muted p-2">
-          <Icon className="h-4 w-4 text-muted-foreground" />
-        </div>
-        <div className="flex items-center gap-2">
-          <h3 className="font-semibold">{title}</h3>
-          <Badge variant="outline">{badge}</Badge>
-        </div>
-      </div>
-      <p className="text-sm leading-6 text-muted-foreground">{description}</p>
-    </div>
-  );
 }
 
 function PageExplorer({
@@ -343,11 +342,11 @@ function PageExplorer({
         return (
           <div
             key={page.url}
-            className="rounded-3xl border border-border/70 bg-card/95 p-4 shadow-sm shadow-black/5"
+            className="rounded-2xl border border-border/70 bg-card p-4 shadow-sm"
           >
             <div className="mb-3 flex items-start justify-between gap-3">
               <div className="min-w-0">
-                <div className="truncate text-sm font-semibold">
+                <div className="truncate text-sm font-semibold" dir="auto">
                   {page.title || formatPath(page.url)}
                 </div>
                 <div className="truncate font-mono text-[11px] text-muted-foreground">
@@ -372,7 +371,7 @@ function PageExplorer({
               onClick={() => router.push(sitePageUrl(crawlId, page.url))}
             >
               {cta}
-              <ChevronRight className="h-4 w-4" />
+              <ChevronRight className="h-4 w-4 rtl:rotate-180" />
             </Button>
           </div>
         );
@@ -388,7 +387,7 @@ export function SiteWorkspace() {
   const copy = getWorkspaceCopy(locale, audience);
   const addPagesToCrawl = useMutation(api.crawls.addPagesToCrawl);
   const updateCrawlMetadata = useMutation(api.crawls.updateCrawlMetadata);
-  const [activeTab, setActiveTab] = useState<WorkspaceTab>("overview");
+  const [activeTab, setActiveTab] = useState<WorkspaceModuleId>("search");
   const [deepDiveTab, setDeepDiveTab] = useState<DeepDiveTab>("pages");
   const [continueCrawling, setContinueCrawling] = useState(false);
   const [continueProgress, setContinueProgress] = useState({ current: 0, total: 0 });
@@ -511,95 +510,126 @@ export function SiteWorkspace() {
   }
 
   return (
-    <div className="min-h-full bg-[radial-gradient(circle_at_top,rgba(13,148,136,0.08),transparent_35%),radial-gradient(circle_at_80%_0%,rgba(217,119,6,0.12),transparent_28%)] p-4 md:p-6">
+    <div className="min-h-full bg-background p-4 md:p-6">
       <div className="mx-auto max-w-7xl space-y-6">
-        <section className="rounded-[2rem] border border-border/70 bg-card/90 p-5 shadow-lg shadow-black/5 md:p-8">
-          <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
+        {/* Identity */}
+        <section className={SURFACE}>
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
             <div className="max-w-3xl">
               <div className="mb-3 flex flex-wrap items-center gap-2">
                 <Badge variant="outline">{copy.audienceLabel}</Badge>
                 <Badge variant="outline">{domain}</Badge>
               </div>
-              <h1 className="font-heading text-3xl tracking-tight md:text-5xl">
+              <h1 className="font-heading text-2xl tracking-tight md:text-3xl" dir="auto">
                 {domain}
               </h1>
-              <p className="mt-3 max-w-2xl text-sm leading-7 text-muted-foreground md:text-base">
+              <p className="mt-2 max-w-2xl text-sm leading-7 text-muted-foreground">
                 {summary.health.summary}
               </p>
-              <p className="mt-3 max-w-2xl text-sm leading-7 text-foreground/75">
+              <p className="mt-2 max-w-2xl text-sm leading-7 text-foreground/75">
                 {copy.assistantSummary}
               </p>
             </div>
 
-            <div className="grid w-full max-w-xl grid-cols-2 gap-3 md:grid-cols-3">
-              <MetricCard
-                label={copy.summaryCards.overall}
-                value={summary.health.overallScore}
-                note={copy.statusLabels[summary.health.status]}
-                icon={Gauge}
-                tone={scoreTone(summary.health.overallScore)}
-              />
-              <MetricCard
-                label={copy.summaryCards.ai}
-                value={summary.ai.score}
-                icon={Bot}
-                tone={scoreTone(summary.ai.score)}
-              />
-              <MetricCard
-                label={copy.summaryCards.search}
-                value={summary.search.score}
-                icon={Search}
-                tone={scoreTone(summary.search.score)}
-              />
-              <MetricCard
-                label={copy.summaryCards.store}
-                value={summary.store.score ?? "—"}
-                icon={ShoppingBag}
-                tone={summary.store.score !== null ? scoreTone(summary.store.score) : undefined}
-              />
-              <MetricCard
-                label={copy.summaryCards.pages}
-                value={summary.health.pagesAnalyzed}
-                icon={Globe}
-                note={rootUrl}
-              />
-            </div>
-          </div>
-
-          <div className="mt-6 grid gap-4 lg:grid-cols-[1.4fr_1fr]">
-            <div className="rounded-[1.75rem] bg-muted/50 p-5">
-              <div className="mb-3 flex items-center gap-2">
-                <Compass className="h-4 w-4 text-muted-foreground" />
-                <h2 className="font-semibold">{copy.helpsTitle}</h2>
-              </div>
-              <div className="grid gap-3 md:grid-cols-3">
-                {copy.helpsItems.map((item) => (
-                  <div key={item} className="rounded-3xl border border-border/60 bg-background/80 p-4 text-sm leading-6 text-foreground/80">
-                    {item}
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            <div className="rounded-[1.75rem] border border-dashed border-border bg-background/70 p-5">
-              <div className="mb-3 flex items-center gap-2">
-                <TrendingUp className="h-4 w-4 text-muted-foreground" />
-                <h2 className="font-semibold">{copy.quickWinsTitle}</h2>
-              </div>
-              <div className="space-y-3">
-                {(summary.health.quickWins.length > 0 ? summary.health.quickWins : summary.health.topPriorities.slice(0, 2)).map((action) => (
-                  <div key={action.id} className="rounded-3xl border border-border/70 bg-card/90 p-4">
-                    <div className="text-sm font-medium">{action.title}</div>
-                    <p className="mt-1 text-xs leading-6 text-muted-foreground">{action.howToFix}</p>
-                  </div>
-                ))}
+            <div className="flex items-center gap-3 lg:flex-col lg:items-end">
+              <StatusBadge status={healthStatusTone(summary.health.status)}>
+                {copy.statusLabels[summary.health.status]}
+              </StatusBadge>
+              <div className={`text-4xl font-semibold ${scoreTone(summary.health.overallScore)}`}>
+                {summary.health.overallScore}
               </div>
             </div>
           </div>
         </section>
 
+        {/* Numbers */}
+        <section className={SURFACE}>
+          <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-5">
+            <ScoreStat
+              label={copy.summaryCards.overall}
+              value={summary.health.overallScore}
+              note={copy.statusLabels[summary.health.status]}
+              icon={Gauge}
+              tone={scoreTone(summary.health.overallScore)}
+              bar={summary.health.overallScore}
+            />
+            <ScoreStat
+              label={copy.summaryCards.ai}
+              value={summary.ai.score}
+              icon={Bot}
+              tone={scoreTone(summary.ai.score)}
+              bar={summary.ai.score}
+            />
+            <ScoreStat
+              label={copy.summaryCards.search}
+              value={summary.search.score}
+              icon={Search}
+              tone={scoreTone(summary.search.score)}
+              bar={summary.search.score}
+            />
+            <ScoreStat
+              label={copy.summaryCards.store}
+              value={summary.store.score ?? "—"}
+              icon={ShoppingBag}
+              tone={summary.store.score !== null ? scoreTone(summary.store.score) : undefined}
+              bar={summary.store.score ?? undefined}
+            />
+            <ScoreStat
+              label={copy.summaryCards.pages}
+              value={summary.health.pagesAnalyzed}
+              icon={Globe}
+            />
+          </div>
+        </section>
+
+        {/* Actions */}
+        <section className="space-y-4">
+          <div>
+            <h2 className="text-lg font-semibold">{copy.prioritiesTitle}</h2>
+            <p className="mt-1 text-sm text-muted-foreground">{copy.overviewIntro}</p>
+          </div>
+
+          {summary.health.topPriorities.length > 0 ? (
+            <div className="grid gap-4 xl:grid-cols-3">
+              {summary.health.topPriorities.map((action) => (
+                <FixCard key={action.id} action={action} copy={copy} />
+              ))}
+            </div>
+          ) : (
+            <div className={`${SURFACE} text-sm text-muted-foreground`}>{copy.prioritiesEmpty}</div>
+          )}
+
+          {summary.health.quickWins.length > 0 ? (
+            <div className="space-y-3">
+              <h3 className="text-sm font-medium text-muted-foreground">{copy.quickWinsTitle}</h3>
+              <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+                {summary.health.quickWins.map((action) => (
+                  <FixCard key={action.id} action={action} copy={copy} density="compact" />
+                ))}
+              </div>
+            </div>
+          ) : null}
+
+          {summary.health.strengths.length > 0 ? (
+            <div className={SURFACE_SUBTLE}>
+              <div className="mb-3 flex items-center gap-2">
+                <CheckCircle2 className="h-4 w-4 text-emerald-500" />
+                <h3 className="font-semibold">{copy.strengthsTitle}</h3>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {summary.health.strengths.map((strength) => (
+                  <span key={strength} className="rounded-full bg-background px-3 py-1.5 text-sm text-muted-foreground">
+                    {strength}
+                  </span>
+                ))}
+              </div>
+            </div>
+          ) : null}
+        </section>
+
+        {/* Crawl remaining pages */}
         {discoveredUrls.length > 0 ? (
-          <section className="rounded-[1.75rem] border border-amber-500/25 bg-amber-500/8 p-4 md:p-5">
+          <section className="rounded-2xl border border-primary/30 bg-primary/5 p-4 md:p-5">
             <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
               <div>
                 <div className="text-sm font-medium">{copy.moreDiscovered}</div>
@@ -626,154 +656,119 @@ export function SiteWorkspace() {
           </section>
         ) : null}
 
-        <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as WorkspaceTab)}>
-          <TabsList className="flex w-full flex-wrap justify-start gap-1 rounded-[1.5rem] bg-card/90 p-2">
-            <TabsTrigger value="overview">{copy.modules.overview}</TabsTrigger>
-            <TabsTrigger value="ai">{copy.modules.ai}</TabsTrigger>
-            <TabsTrigger value="search">{copy.modules.search}</TabsTrigger>
-            <TabsTrigger value="store">{copy.modules.store}</TabsTrigger>
-            <TabsTrigger value="deep-dive">{copy.modules.deepDive}</TabsTrigger>
+        {/* Capability modules */}
+        <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as WorkspaceModuleId)}>
+          <TabsList className="flex h-auto w-full flex-wrap justify-start gap-1 rounded-2xl border border-border bg-muted/40 p-1">
+            {WORKSPACE_MODULES.map((mod) => (
+              <TabsTrigger key={mod.id} value={mod.id} className="flex-none gap-1.5 px-3 py-1.5">
+                <mod.icon className="h-4 w-4" />
+                {copy.modules[mod.id]}
+              </TabsTrigger>
+            ))}
           </TabsList>
 
-          <TabsContent value="overview" className="space-y-6 pt-4">
-            <section>
-              <p className="mb-4 text-sm leading-7 text-muted-foreground">{copy.overviewIntro}</p>
-              {summary.health.topPriorities.length > 0 ? (
-                <>
-                  <h2 className="mb-4 text-lg font-semibold">{copy.prioritiesTitle}</h2>
-                  <div className="grid gap-4 xl:grid-cols-3">
-                    {summary.health.topPriorities.map((action) => (
-                      <ActionCard key={action.id} action={action} copy={copy} />
-                    ))}
-                  </div>
-                </>
-              ) : (
-                <div className="rounded-[1.75rem] border border-border bg-card/90 p-6 text-sm text-muted-foreground">
-                  {copy.prioritiesEmpty}
-                </div>
-              )}
+          {/* Search & SEO */}
+          <TabsContent value="search" className="space-y-6 pt-4">
+            <section className={SURFACE}>
+              <p className="text-sm leading-7 text-muted-foreground">{copy.searchIntro}</p>
+              <div className="mt-5 grid grid-cols-2 gap-3 md:grid-cols-4">
+                <ScoreStat label={copy.metrics.metaCoverage} value={`${summary.search.metaCoverage}%`} icon={Search} tone={scoreTone(summary.search.metaCoverage)} bar={summary.search.metaCoverage} />
+                <ScoreStat label={copy.metrics.indexable} value={summary.search.indexablePages} icon={Globe} />
+                <ScoreStat label={copy.metrics.brokenLinks} value={summary.search.brokenLinksCount} icon={AlertTriangle} tone={summary.search.brokenLinksCount > 0 ? "text-rose-500" : undefined} />
+                <ScoreStat label={copy.metrics.sitemapCoverage} value={`${summary.search.sitemapCoverage}%`} icon={Compass} tone={scoreTone(summary.search.sitemapCoverage)} bar={summary.search.sitemapCoverage} />
+              </div>
+              <p className="mt-4 text-sm leading-7 text-foreground/80">{summary.search.summary}</p>
             </section>
 
-            <section className="grid gap-4 lg:grid-cols-2">
-              <div className="rounded-[1.75rem] border border-border/70 bg-card/90 p-5">
-                <div className="mb-4 flex items-center gap-2">
-                  <Sparkles className="h-4 w-4 text-muted-foreground" />
-                  <h2 className="font-semibold">{copy.strengthsTitle}</h2>
-                </div>
-                <div className="space-y-3">
-                  {summary.health.strengths.map((strength) => (
-                    <div key={strength} className="rounded-3xl bg-muted/50 p-4 text-sm leading-6 text-foreground/80">
-                      {strength}
-                    </div>
+            <section className="grid gap-4 xl:grid-cols-[1.2fr_1fr]">
+              <div className="space-y-4">
+                <h2 className="text-sm font-medium text-muted-foreground">{copy.guidedFixesTitle}</h2>
+                <div className="grid gap-4 xl:grid-cols-2">
+                  {summary.search.actions.map((action) => (
+                    <FixCard key={action.id} action={action} copy={copy} />
                   ))}
                 </div>
               </div>
 
-              <div className="grid gap-4">
-                <TeaserCard
-                  title={copy.trackTitle}
-                  description={copy.trackDescription}
-                  icon={Radar}
-                  badge={copy.comingSoon}
-                />
-                <TeaserCard
-                  title={copy.competitorsTitle}
-                  description={copy.competitorsDescription}
-                  icon={Target}
+              <div className="space-y-4">
+                <div className={SURFACE}>
+                  <div className="mb-4 flex items-center gap-2">
+                    <Compass className="h-4 w-4 text-muted-foreground" />
+                    <h2 className="font-semibold">{copy.robotsTitle}</h2>
+                  </div>
+                  {crawlResult.robotsSitemap ? (
+                    <div className="space-y-3">
+                      <div className={SURFACE_SUBTLE}>
+                        <div className="text-sm font-medium">robots.txt</div>
+                        <p className="mt-1 text-xs leading-6 text-muted-foreground">
+                          {crawlResult.robotsSitemap.robotsTxt.issues[0] ?? copy.robotsGood}
+                        </p>
+                      </div>
+                      <div className={SURFACE_SUBTLE}>
+                        <div className="text-sm font-medium">sitemap.xml</div>
+                        <p className="mt-1 text-xs leading-6 text-muted-foreground">
+                          {crawlResult.robotsSitemap.sitemap.issues[0] ?? copy.robotsGood}
+                        </p>
+                      </div>
+                      <div className={`${SURFACE_SUBTLE} whitespace-pre-line text-xs leading-6 text-muted-foreground`}>
+                        {copy.sitemapCoverageNote(
+                          crawlResult.robotsSitemap.coverage.crawledNotInSitemap.length,
+                          crawlResult.robotsSitemap.coverage.inSitemapNotCrawled.length
+                        )}
+                      </div>
+                    </div>
+                  ) : (
+                    <p className="text-sm text-muted-foreground">{copy.robotsGood}</p>
+                  )}
+                </div>
+
+                <RoadmapPlaceholder
+                  icon={Bot}
+                  title={copy.aiRewrites.title}
+                  description={copy.aiRewrites.description}
                   badge={copy.comingSoon}
                 />
               </div>
             </section>
           </TabsContent>
 
+          {/* AI Readiness */}
           <TabsContent value="ai" className="space-y-6 pt-4">
-            <section className="rounded-[1.75rem] border border-border/70 bg-card/90 p-5">
+            <section className={SURFACE}>
               <p className="text-sm leading-7 text-muted-foreground">{copy.aiIntro}</p>
-              <div className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-5">
-                <MetricCard label={copy.metrics.extractable} value={summary.ai.extractablePageCount} icon={Wrench} />
-                <MetricCard label={copy.metrics.botProtected} value={summary.ai.botProtectedPageCount} icon={AlertTriangle} />
-                <MetricCard label={copy.metrics.structured} value={`${summary.ai.structuredDataCoverage}%`} icon={Briefcase} tone={scoreTone(summary.ai.structuredDataCoverage)} />
-                <MetricCard label={copy.metrics.language} value={`${summary.ai.languageClarityCoverage}%`} icon={Globe} tone={scoreTone(summary.ai.languageClarityCoverage)} />
-                <MetricCard label={copy.metrics.readability} value={`${summary.ai.llmReadabilityCoverage}%`} icon={Bot} tone={scoreTone(summary.ai.llmReadabilityCoverage)} />
+              <div className="mt-5 grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-5">
+                <ScoreStat label={copy.metrics.extractable} value={summary.ai.extractablePageCount} icon={Wrench} />
+                <ScoreStat label={copy.metrics.botProtected} value={summary.ai.botProtectedPageCount} icon={AlertTriangle} tone={summary.ai.botProtectedPageCount > 0 ? "text-rose-500" : undefined} />
+                <ScoreStat label={copy.metrics.structured} value={`${summary.ai.structuredDataCoverage}%`} icon={Briefcase} tone={scoreTone(summary.ai.structuredDataCoverage)} bar={summary.ai.structuredDataCoverage} />
+                <ScoreStat label={copy.metrics.language} value={`${summary.ai.languageClarityCoverage}%`} icon={Globe} tone={scoreTone(summary.ai.languageClarityCoverage)} bar={summary.ai.languageClarityCoverage} />
+                <ScoreStat label={copy.metrics.readability} value={`${summary.ai.llmReadabilityCoverage}%`} icon={Bot} tone={scoreTone(summary.ai.llmReadabilityCoverage)} bar={summary.ai.llmReadabilityCoverage} />
               </div>
               <p className="mt-4 text-sm leading-7 text-foreground/80">{summary.ai.summary}</p>
             </section>
 
             <div className="grid gap-4 xl:grid-cols-3">
               {summary.ai.topPriorities.map((action) => (
-                <ActionCard key={action.id} action={action} copy={copy} />
+                <FixCard key={action.id} action={action} copy={copy} />
               ))}
             </div>
           </TabsContent>
 
-          <TabsContent value="search" className="space-y-6 pt-4">
-            <section className="rounded-[1.75rem] border border-border/70 bg-card/90 p-5">
-              <p className="text-sm leading-7 text-muted-foreground">{copy.searchIntro}</p>
-              <div className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-                <MetricCard label={copy.metrics.metaCoverage} value={`${summary.search.metaCoverage}%`} icon={Search} tone={scoreTone(summary.search.metaCoverage)} />
-                <MetricCard label={copy.metrics.indexable} value={summary.search.indexablePages} icon={Globe} />
-                <MetricCard label={copy.metrics.brokenLinks} value={summary.search.brokenLinksCount} icon={AlertTriangle} tone={summary.search.brokenLinksCount > 0 ? "text-rose-500" : undefined} />
-                <MetricCard label={copy.metrics.sitemapCoverage} value={`${summary.search.sitemapCoverage}%`} icon={Compass} tone={scoreTone(summary.search.sitemapCoverage)} />
-              </div>
-              <p className="mt-4 text-sm leading-7 text-foreground/80">{summary.search.summary}</p>
-            </section>
-
-            <section className="grid gap-4 xl:grid-cols-[1.2fr_1fr]">
-              <div className="grid gap-4 xl:grid-cols-2">
-                {summary.search.actions.map((action) => (
-                  <ActionCard key={action.id} action={action} copy={copy} />
-                ))}
-              </div>
-
-              <div className="rounded-[1.75rem] border border-border/70 bg-card/90 p-5">
-                <div className="mb-4 flex items-center gap-2">
-                  <Compass className="h-4 w-4 text-muted-foreground" />
-                  <h2 className="font-semibold">{copy.robotsTitle}</h2>
-                </div>
-
-                {crawlResult.robotsSitemap ? (
-                  <div className="space-y-4">
-                    <div className="rounded-3xl bg-muted/50 p-4">
-                      <div className="text-sm font-medium">robots.txt</div>
-                      <p className="mt-1 text-xs leading-6 text-muted-foreground">
-                        {crawlResult.robotsSitemap.robotsTxt.issues[0] ?? copy.robotsGood}
-                      </p>
-                    </div>
-                    <div className="rounded-3xl bg-muted/50 p-4">
-                      <div className="text-sm font-medium">sitemap.xml</div>
-                      <p className="mt-1 text-xs leading-6 text-muted-foreground">
-                        {crawlResult.robotsSitemap.sitemap.issues[0] ?? copy.robotsGood}
-                      </p>
-                    </div>
-                    <div className="rounded-3xl bg-muted/50 p-4 text-xs leading-6 text-muted-foreground">
-                      {copy.sitemapCoverageNote(
-                        crawlResult.robotsSitemap.coverage.crawledNotInSitemap.length,
-                        crawlResult.robotsSitemap.coverage.inSitemapNotCrawled.length
-                      )}
-                    </div>
-                  </div>
-                ) : (
-                  <p className="text-sm text-muted-foreground">{copy.robotsGood}</p>
-                )}
-              </div>
-            </section>
-          </TabsContent>
-
-          <TabsContent value="store" className="space-y-6 pt-4">
-            <section className="rounded-[1.75rem] border border-border/70 bg-card/90 p-5">
+          {/* Catalog & Commerce */}
+          <TabsContent value="commerce" className="space-y-6 pt-4">
+            <section className={SURFACE}>
               <p className="text-sm leading-7 text-muted-foreground">{copy.storeIntro}</p>
               {summary.store.productCount > 0 ? (
                 <>
-                  <div className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-                    <MetricCard label={copy.metrics.products} value={summary.store.productCount} icon={ShoppingBag} />
-                    <MetricCard label={copy.metrics.catalogPages} value={summary.store.pagesWithProducts} icon={Globe} />
-                    <MetricCard label={copy.metrics.dataCoverage} value={`${summary.store.productDataCoverage}%`} icon={Gauge} tone={scoreTone(summary.store.productDataCoverage)} />
-                    <MetricCard label={copy.metrics.schemaCoverage} value={`${summary.store.schemaBackedCoverage}%`} icon={Briefcase} tone={scoreTone(summary.store.schemaBackedCoverage)} />
+                  <div className="mt-5 grid grid-cols-2 gap-3 md:grid-cols-4">
+                    <ScoreStat label={copy.metrics.products} value={summary.store.productCount} icon={ShoppingBag} />
+                    <ScoreStat label={copy.metrics.catalogPages} value={summary.store.pagesWithProducts} icon={Globe} />
+                    <ScoreStat label={copy.metrics.dataCoverage} value={`${summary.store.productDataCoverage}%`} icon={Gauge} tone={scoreTone(summary.store.productDataCoverage)} bar={summary.store.productDataCoverage} />
+                    <ScoreStat label={copy.metrics.schemaCoverage} value={`${summary.store.schemaBackedCoverage}%`} icon={Briefcase} tone={scoreTone(summary.store.schemaBackedCoverage)} bar={summary.store.schemaBackedCoverage} />
                   </div>
                   <p className="mt-4 text-sm leading-7 text-foreground/80">{summary.store.summary}</p>
                 </>
               ) : (
-                <div className="mt-4 rounded-[1.75rem] border border-dashed border-border bg-background/60 p-6">
+                <div className={`${DASHED} mt-4`}>
                   <p className="text-sm font-medium">{copy.noStore}</p>
                   <p className="mt-2 text-sm leading-7 text-muted-foreground">{copy.noStoreHint}</p>
                 </div>
@@ -781,16 +776,34 @@ export function SiteWorkspace() {
             </section>
 
             {summary.store.productCount > 0 ? (
-              <div className="grid gap-4 xl:grid-cols-2">
-                {summary.store.actions.map((action) => (
-                  <ActionCard key={action.id} action={action} copy={copy} />
-                ))}
+              <PriceStockModule products={products} copy={copy} />
+            ) : null}
+
+            {summary.store.productCount > 0 && summary.store.actions.length > 0 ? (
+              <div className="space-y-4">
+                <h2 className="text-sm font-medium text-muted-foreground">{copy.guidedFixesTitle}</h2>
+                <div className="grid gap-4 xl:grid-cols-2">
+                  {summary.store.actions.map((action) => (
+                    <FixCard key={action.id} action={action} copy={copy} />
+                  ))}
+                </div>
               </div>
             ) : null}
           </TabsContent>
 
-          <TabsContent value="deep-dive" className="space-y-5 pt-4">
-            <section className="rounded-[1.75rem] border border-border/70 bg-card/90 p-5">
+          {/* Monitoring */}
+          <TabsContent value="monitoring" className="pt-4">
+            <MonitoringModule copy={copy} pagesAnalyzed={summary.health.pagesAnalyzed} />
+          </TabsContent>
+
+          {/* Competitors */}
+          <TabsContent value="competitors" className="pt-4">
+            <CompetitorsModule copy={copy} />
+          </TabsContent>
+
+          {/* Pages (deep dive) */}
+          <TabsContent value="pages" className="space-y-5 pt-4">
+            <section className={SURFACE}>
               <p className="text-sm leading-7 text-muted-foreground">{copy.deepDiveIntro}</p>
             </section>
 
