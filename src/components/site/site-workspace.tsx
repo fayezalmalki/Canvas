@@ -511,23 +511,20 @@ export function SiteWorkspace() {
 
   return (
     <div className="min-h-full bg-background p-4 md:p-6">
-      <div className="mx-auto max-w-7xl space-y-6">
-        {/* Identity */}
+      <div className="mx-auto max-w-7xl space-y-5">
+        {/* Header: identity + scores */}
         <section className={SURFACE}>
           <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-            <div className="max-w-3xl">
-              <div className="mb-3 flex flex-wrap items-center gap-2">
+            <div className="max-w-2xl">
+              <div className="mb-2 flex flex-wrap items-center gap-2">
                 <Badge variant="outline">{copy.audienceLabel}</Badge>
                 <Badge variant="outline">{domain}</Badge>
               </div>
-              <h1 className="font-heading text-2xl tracking-tight md:text-3xl" dir="auto">
+              <h1 className="font-heading text-2xl tracking-tight" dir="auto">
                 {domain}
               </h1>
-              <p className="mt-2 max-w-2xl text-sm leading-7 text-muted-foreground">
+              <p className="mt-2 text-sm leading-6 text-muted-foreground">
                 {summary.health.summary}
-              </p>
-              <p className="mt-2 max-w-2xl text-sm leading-7 text-foreground/75">
-                {copy.assistantSummary}
               </p>
             </div>
 
@@ -535,24 +532,16 @@ export function SiteWorkspace() {
               <StatusBadge status={healthStatusTone(summary.health.status)}>
                 {copy.statusLabels[summary.health.status]}
               </StatusBadge>
-              <div className={`text-4xl font-semibold ${scoreTone(summary.health.overallScore)}`}>
-                {summary.health.overallScore}
+              <div className="flex items-baseline gap-1.5">
+                <span className={`text-4xl font-semibold ${scoreTone(summary.health.overallScore)}`}>
+                  {summary.health.overallScore}
+                </span>
+                <span className="text-xs text-muted-foreground">{copy.summaryCards.overall}</span>
               </div>
             </div>
           </div>
-        </section>
 
-        {/* Numbers */}
-        <section className={SURFACE}>
-          <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-5">
-            <ScoreStat
-              label={copy.summaryCards.overall}
-              value={summary.health.overallScore}
-              note={copy.statusLabels[summary.health.status]}
-              icon={Gauge}
-              tone={scoreTone(summary.health.overallScore)}
-              bar={summary.health.overallScore}
-            />
+          <div className="mt-5 grid grid-cols-2 gap-3 border-t border-border/60 pt-5 sm:grid-cols-4">
             <ScoreStat
               label={copy.summaryCards.ai}
               value={summary.ai.score}
@@ -583,46 +572,33 @@ export function SiteWorkspace() {
         </section>
 
         {/* Actions */}
-        <section className="space-y-4">
-          <div>
-            <h2 className="text-lg font-semibold">{copy.prioritiesTitle}</h2>
-            <p className="mt-1 text-sm text-muted-foreground">{copy.overviewIntro}</p>
+        <section className="space-y-3">
+          <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
+            <h2 className="text-base font-semibold">{copy.prioritiesTitle}</h2>
+            <p className="text-sm text-muted-foreground">{copy.overviewIntro}</p>
           </div>
 
           {summary.health.topPriorities.length > 0 ? (
-            <div className="grid gap-4 xl:grid-cols-3">
+            <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
               {summary.health.topPriorities.map((action) => (
-                <FixCard key={action.id} action={action} copy={copy} />
+                <FixCard key={action.id} action={action} copy={copy} density="compact" />
               ))}
             </div>
           ) : (
             <div className={`${SURFACE} text-sm text-muted-foreground`}>{copy.prioritiesEmpty}</div>
           )}
 
-          {summary.health.quickWins.length > 0 ? (
-            <div className="space-y-3">
-              <h3 className="text-sm font-medium text-muted-foreground">{copy.quickWinsTitle}</h3>
-              <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-                {summary.health.quickWins.map((action) => (
-                  <FixCard key={action.id} action={action} copy={copy} density="compact" />
-                ))}
-              </div>
-            </div>
-          ) : null}
-
           {summary.health.strengths.length > 0 ? (
-            <div className={SURFACE_SUBTLE}>
-              <div className="mb-3 flex items-center gap-2">
-                <CheckCircle2 className="h-4 w-4 text-emerald-500" />
-                <h3 className="font-semibold">{copy.strengthsTitle}</h3>
-              </div>
-              <div className="flex flex-wrap gap-2">
-                {summary.health.strengths.map((strength) => (
-                  <span key={strength} className="rounded-full bg-background px-3 py-1.5 text-sm text-muted-foreground">
-                    {strength}
-                  </span>
-                ))}
-              </div>
+            <div className="flex flex-wrap items-center gap-2 pt-1">
+              <span className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+                <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />
+                {copy.strengthsTitle}
+              </span>
+              {summary.health.strengths.map((strength) => (
+                <span key={strength} className="rounded-full border border-border/70 bg-card px-2.5 py-1 text-xs text-muted-foreground">
+                  {strength}
+                </span>
+              ))}
             </div>
           ) : null}
         </section>
@@ -668,7 +644,7 @@ export function SiteWorkspace() {
           </TabsList>
 
           {/* Search & SEO */}
-          <TabsContent value="search" className="space-y-6 pt-4">
+          <TabsContent value="search" className="space-y-5 pt-4">
             <section className={SURFACE}>
               <p className="text-sm leading-7 text-muted-foreground">{copy.searchIntro}</p>
               <div className="mt-5 grid grid-cols-2 gap-3 md:grid-cols-4">
@@ -733,7 +709,7 @@ export function SiteWorkspace() {
           </TabsContent>
 
           {/* AI Readiness */}
-          <TabsContent value="ai" className="space-y-6 pt-4">
+          <TabsContent value="ai" className="space-y-5 pt-4">
             <section className={SURFACE}>
               <p className="text-sm leading-7 text-muted-foreground">{copy.aiIntro}</p>
               <div className="mt-5 grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-5">
@@ -754,7 +730,7 @@ export function SiteWorkspace() {
           </TabsContent>
 
           {/* Catalog & Commerce */}
-          <TabsContent value="commerce" className="space-y-6 pt-4">
+          <TabsContent value="commerce" className="space-y-5 pt-4">
             <section className={SURFACE}>
               <p className="text-sm leading-7 text-muted-foreground">{copy.storeIntro}</p>
               {summary.store.productCount > 0 ? (

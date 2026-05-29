@@ -7,11 +7,11 @@ import { Sparkles } from "lucide-react";
 import type { WorkspaceCopy } from "@/components/site/site-workspace";
 
 // Standardized calm surfaces — match the landing-page aesthetic:
-// subtle border, solid card bg, soft shadow, restrained radii. No bg-*/90 or shadow-lg.
-export const SURFACE = "rounded-3xl border border-border/70 bg-card p-5 shadow-sm";
+// subtle border, solid card bg, soft shadow, restrained radii and padding.
+export const SURFACE = "rounded-2xl border border-border/70 bg-card p-4 shadow-sm";
 export const SURFACE_SUBTLE = "rounded-2xl border border-border/70 bg-muted/40 p-4";
-export const STAT = "rounded-2xl bg-background p-4";
-export const DASHED = "rounded-2xl border border-dashed border-border bg-muted/30 p-5";
+export const STAT = "rounded-xl bg-background p-3";
+export const DASHED = "rounded-2xl border border-dashed border-border bg-muted/30 p-4";
 
 export function ScoreStat({
   label,
@@ -30,13 +30,13 @@ export function ScoreStat({
 }) {
   return (
     <div className={STAT}>
-      <div className="mb-2 flex items-center gap-2 text-xs text-muted-foreground">
+      <div className="mb-1.5 flex items-center gap-1.5 text-xs text-muted-foreground">
         <Icon className="h-3.5 w-3.5 shrink-0" />
         <span className="truncate">{label}</span>
       </div>
-      <div className={`text-2xl font-semibold ${tone ?? ""}`}>{value}</div>
-      {note ? <p className="mt-1 truncate text-xs text-muted-foreground">{note}</p> : null}
-      {bar !== undefined ? <Progress value={bar} className="mt-3" /> : null}
+      <div className={`text-xl font-semibold ${tone ?? ""}`}>{value}</div>
+      {note ? <p className="mt-0.5 truncate text-xs text-muted-foreground">{note}</p> : null}
+      {bar !== undefined ? <Progress value={bar} className="mt-2" /> : null}
     </div>
   );
 }
@@ -54,15 +54,20 @@ export function FixCard({
   copy: WorkspaceCopy;
   density?: "full" | "compact";
 }) {
+  const metricChip = action.metric ? (
+    <span className="ms-auto shrink-0 rounded-full bg-muted px-2 py-0.5 text-[11px] font-medium text-muted-foreground">
+      {action.metric}
+    </span>
+  ) : null;
+
   if (density === "compact") {
     return (
-      <div className="rounded-2xl border border-border/70 bg-card p-4 shadow-sm">
-        <div className="flex items-center gap-2">
-          <Badge variant={priorityVariant(action.priority)}>
-            {copy.priorityLabels[action.priority]}
-          </Badge>
-          <div className="min-w-0 flex-1 truncate text-sm font-medium">{action.title}</div>
+      <div className={SURFACE}>
+        <div className="mb-1.5 flex items-center gap-2">
+          <Badge variant={priorityVariant(action.priority)}>{copy.priorityLabels[action.priority]}</Badge>
+          {metricChip}
         </div>
+        <h3 className="text-sm font-semibold leading-snug">{action.title}</h3>
         <p className="mt-1.5 text-xs leading-6 text-muted-foreground">{action.howToFix}</p>
       </div>
     );
@@ -70,34 +75,13 @@ export function FixCard({
 
   return (
     <div className={SURFACE}>
-      <div className="mb-4 flex items-start justify-between gap-3">
-        <div>
-          <Badge variant={priorityVariant(action.priority)}>
-            {copy.priorityLabels[action.priority]}
-          </Badge>
-          <h3 className="mt-3 text-base font-semibold">{action.title}</h3>
-        </div>
-        {action.metric ? (
-          <span className="rounded-full bg-muted px-2.5 py-1 text-[11px] font-medium text-muted-foreground">
-            {action.metric}
-          </span>
-        ) : null}
+      <div className="mb-2 flex items-center gap-2">
+        <Badge variant={priorityVariant(action.priority)}>{copy.priorityLabels[action.priority]}</Badge>
+        {metricChip}
       </div>
-
-      <div className="space-y-4">
-        <div>
-          <div className="mb-1 text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">
-            {copy.whyItMatters}
-          </div>
-          <p className="text-sm leading-6 text-foreground/80">{action.whyItMatters}</p>
-        </div>
-        <div>
-          <div className="mb-1 text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">
-            {copy.howToFix}
-          </div>
-          <p className="text-sm leading-6 text-foreground/80">{action.howToFix}</p>
-        </div>
-      </div>
+      <h3 className="text-sm font-semibold leading-snug">{action.title}</h3>
+      <p className="mt-2 text-sm leading-6 text-foreground/80">{action.howToFix}</p>
+      <p className="mt-1.5 text-xs leading-5 text-muted-foreground">{action.whyItMatters}</p>
     </div>
   );
 }
@@ -119,20 +103,18 @@ export function RoadmapPlaceholder({
 }) {
   return (
     <div className={DASHED}>
-      <div className="mb-3 flex items-center gap-3">
-        <div className="rounded-2xl bg-muted p-2">
+      <div className="mb-2 flex items-center gap-2.5">
+        <div className="rounded-xl bg-muted p-1.5">
           <Icon className="h-4 w-4 text-muted-foreground" />
         </div>
-        <div className="flex items-center gap-2">
-          <h3 className="font-semibold">{title}</h3>
-          <Badge variant="outline">{badge}</Badge>
-        </div>
+        <h3 className="font-semibold">{title}</h3>
+        <Badge variant="outline" className="ms-auto">{badge}</Badge>
       </div>
       {description ? (
         <p className="text-sm leading-6 text-muted-foreground">{description}</p>
       ) : null}
       {points && points.length > 0 ? (
-        <ul className="mt-3 space-y-2">
+        <ul className="mt-2.5 space-y-1.5">
           {points.map((point) => (
             <li key={point} className="flex items-start gap-2 text-sm leading-6 text-muted-foreground">
               <Sparkles className="mt-1 h-3.5 w-3.5 shrink-0 text-muted-foreground/70" />
