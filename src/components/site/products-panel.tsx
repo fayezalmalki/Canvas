@@ -27,11 +27,11 @@ interface ProductWithPage extends ProductData {
 type StockFilter = "all" | "in-stock" | "out-of-stock" | "on-sale" | "unknown";
 type SortOption = "name-asc" | "price-low" | "price-high" | "discount";
 
-function isInStock(p: ProductWithPage) {
+export function isInStock(p: ProductWithPage) {
   return p.availability === "InStock" || p.availability === "LimitedAvailability";
 }
 
-function isOutOfStock(p: ProductWithPage) {
+export function isOutOfStock(p: ProductWithPage) {
   return p.availability === "OutOfStock" || p.availability === "Discontinued";
 }
 
