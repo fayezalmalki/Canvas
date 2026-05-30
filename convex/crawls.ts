@@ -1,4 +1,5 @@
 import { mutation, query, type MutationCtx } from "./_generated/server";
+import type { Id } from "./_generated/dataModel";
 import { v } from "convex/values";
 
 const outgoingLinkValidator = v.object({
@@ -279,7 +280,7 @@ export const getCrawlBySlug = query({
     // Fallback: try as Convex _id for backward compat with old URLs
     if (!crawl) {
       try {
-        const doc = await ctx.db.get(args.slug as any) as any;
+        const doc = await ctx.db.get(args.slug as Id<"crawls">);
         if (doc && "rootUrl" in doc && "pagesCount" in doc) {
           crawl = doc;
         }
@@ -462,4 +463,62 @@ export const listRecentCrawls = query({
     }
     return unique;
   },
+});
+
+// ---- AI fixes (per-page rewrites), cached per crawl + page + locale ----
+
+const localeArg = v.union(v.literal("en"), v.literal("ar"));
+
+export const storePageFix = mutation({
+  args: {
+    crawlId: v.id("crawls"),
+    pageUrl: v.string(),
+    locale: localeArg,
+    title: v.string(),
+    metaDescription: v.string(),
+    altTextSuggestions: v.array(v.object({ imageHint: v.string(), alt: v.string() })),
+    jsonLd: v.object({ type: v.string(), json: v.string() }),
+    provider: v.union(v.string(), v.null()),
+  },
+  handler: async (ctx, args) => {
+    const existing = await ctx.db
+      .query("pageFixes")
+      .withIndex("by_crawl_page_locale", (q) =>
+        q.eq("crawlId", args.crawlId).eq("pageUrl", args.pageUrl).eq("locale", args.locale)
+      )
+      .first();
+    if (existing) await ctx.db.delete(existing._id);
+
+    await ctx.db.insert("pageFixes", {
+      crawlId: args.crawlId,
+      pageUrl: args.pageUrl,
+      locale: args.locale,
+      title: args.title.slice(0, 300),
+      metaDescription: args.metaDescription.slice(0, 600),
+      altTextSuggestions: args.altTextSuggestions.slice(0, 6),
+      jsonLd: { type: args.jsonLd.type.slice(0, 60), json: args.jsonLd.json.slice(0, 8000) },
+      provider: args.provider,
+      createdAt: Date.now(),
+    });
+  },
+});
+
+export const getPageFix = query({
+  args: { crawlId: v.id("crawls"), pageUrl: v.string(), locale: localeArg },
+  handler: async (ctx, args) =>
+    await ctx.db
+      .query("pageFixes")
+      .withIndex("by_crawl_page_locale", (q) =>
+        q.eq("crawlId", args.crawlId).eq("pageUrl", args.pageUrl).eq("locale", args.locale)
+      )
+      .first(),
+});
+
+export const listPageFixesForCrawl = query({
+  args: { crawlId: v.id("crawls") },
+  handler: async (ctx, args) =>
+    await ctx.db
+      .query("pageFixes")
+      .withIndex("by_crawl_page_locale", (q) => q.eq("crawlId", args.crawlId))
+      .collect(),
 });

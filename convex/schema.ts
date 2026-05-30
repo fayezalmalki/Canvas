@@ -187,4 +187,16 @@ export default defineSchema({
       })
     ),
   }).index("by_page_url", ["pageUrl"]),
+
+  pageFixes: defineTable({
+    crawlId: v.id("crawls"),
+    pageUrl: v.string(),
+    locale: v.union(v.literal("en"), v.literal("ar")),
+    title: v.string(),
+    metaDescription: v.string(),
+    altTextSuggestions: v.array(v.object({ imageHint: v.string(), alt: v.string() })),
+    jsonLd: v.object({ type: v.string(), json: v.string() }),
+    provider: v.union(v.string(), v.null()),
+    createdAt: v.number(),
+  }).index("by_crawl_page_locale", ["crawlId", "pageUrl", "locale"]),
 });

@@ -28,12 +28,12 @@ import { ProductsPanel } from "@/components/site/products-panel";
 import {
   FixCard,
   LinkRow,
-  RoadmapPlaceholder,
   ScoreStat,
   SURFACE,
   SURFACE_SUBTLE,
   DASHED,
 } from "@/components/site/workspace-cards";
+import { AiRewritesModule } from "@/components/site/ai-rewrites-module";
 import {
   CompetitorsModule,
   MonitoringModule,
@@ -114,7 +114,18 @@ function getWorkspaceCopy(locale: "en" | "ar", audience: "owner" | "consultant")
       robotsGood: "لا توجد إشارات حرجة ظاهرة هنا.",
       aiRewrites: {
         title: "إعادة صياغة بالذكاء",
-        description: "قريباً: عناوين وأوصاف مقترحة تلقائياً للصفحات الضعيفة.",
+        description: "أنشئ عناوين وأوصافاً ونصوصاً بديلة وبيانات schema أفضل لأضعف صفحاتك، استناداً إلى محتوى كل صفحة الفعلي.",
+        noWeakPages: "لا توجد صفحات ضعيفة — بياناتك الوصفية تبدو جيدة.",
+        generate: "إنشاء",
+        regenerate: "إعادة الإنشاء",
+        generating: "جارٍ الإنشاء…",
+        fTitle: "العنوان",
+        fDescription: "وصف الميتا",
+        fAlt: "نص الصور البديل",
+        fSchema: "JSON-LD",
+        copy: "نسخ",
+        copied: "تم النسخ",
+        noKey: "أضف مفتاح مزود ذكاء (MISTRAL_API_KEY أو OPENAI_API_KEY) لإنشاء الصياغات.",
       },
       links: {
         health: "صحة الروابط",
@@ -240,8 +251,19 @@ function getWorkspaceCopy(locale: "en" | "ar", audience: "owner" | "consultant")
     robotsTitle: "robots.txt and sitemap signals",
     robotsGood: "No major crawl-control issues stand out here.",
     aiRewrites: {
-      title: "AI-written rewrites",
-      description: "Coming soon: auto-suggested titles and descriptions for weak pages.",
+      title: "AI rewrites",
+      description: "Generate stronger titles, descriptions, alt text, and schema for your weakest pages — grounded in each page's real content.",
+      noWeakPages: "No weak pages found — your metadata looks solid.",
+      generate: "Generate",
+      regenerate: "Regenerate",
+      generating: "Generating…",
+      fTitle: "Title",
+      fDescription: "Meta description",
+      fAlt: "Image alt text",
+      fSchema: "JSON-LD",
+      copy: "Copy",
+      copied: "Copied",
+      noKey: "Add an AI provider key (MISTRAL_API_KEY or OPENAI_API_KEY) to generate rewrites.",
     },
     links: {
       health: "Link health",
@@ -797,11 +819,11 @@ export function SiteWorkspace() {
               </section>
             </div>
 
-            <RoadmapPlaceholder
-              icon={Bot}
-              title={copy.aiRewrites.title}
-              description={copy.aiRewrites.description}
-              badge={copy.comingSoon}
+            <AiRewritesModule
+              crawlDocId={crawlResult._id}
+              pages={pages}
+              copy={copy.aiRewrites}
+              locale={locale}
             />
           </TabsContent>
 
