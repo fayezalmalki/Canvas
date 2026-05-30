@@ -522,3 +522,48 @@ export const listPageFixesForCrawl = query({
       .withIndex("by_crawl_page_locale", (q) => q.eq("crawlId", args.crawlId))
       .collect(),
 });
+
+// ---- AEO live citation tests, cached per crawl + page + locale ----
+
+export const storeAeoTest = mutation({
+  args: {
+    crawlId: v.id("crawls"),
+    pageUrl: v.string(),
+    locale: localeArg,
+    whatItOffers: v.string(),
+    couldCiteConfidently: v.union(v.literal("yes"), v.literal("partly"), v.literal("no")),
+    confidence: v.number(),
+    missingForCitation: v.array(v.string()),
+    detectedEntities: v.array(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const existing = await ctx.db
+      .query("aeoTests")
+      .withIndex("by_crawl_page_locale", (q) =>
+        q.eq("crawlId", args.crawlId).eq("pageUrl", args.pageUrl).eq("locale", args.locale)
+      )
+      .first();
+    if (existing) await ctx.db.delete(existing._id);
+
+    await ctx.db.insert("aeoTests", {
+      crawlId: args.crawlId,
+      pageUrl: args.pageUrl,
+      locale: args.locale,
+      whatItOffers: args.whatItOffers.slice(0, 600),
+      couldCiteConfidently: args.couldCiteConfidently,
+      confidence: Math.max(0, Math.min(100, Math.round(args.confidence))),
+      missingForCitation: args.missingForCitation.slice(0, 8).map((s) => s.slice(0, 200)),
+      detectedEntities: args.detectedEntities.slice(0, 12).map((s) => s.slice(0, 80)),
+      createdAt: Date.now(),
+    });
+  },
+});
+
+export const listAeoTestsForCrawl = query({
+  args: { crawlId: v.id("crawls") },
+  handler: async (ctx, args) =>
+    await ctx.db
+      .query("aeoTests")
+      .withIndex("by_crawl_page_locale", (q) => q.eq("crawlId", args.crawlId))
+      .collect(),
+});

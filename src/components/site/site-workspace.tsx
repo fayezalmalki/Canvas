@@ -34,6 +34,7 @@ import {
   DASHED,
 } from "@/components/site/workspace-cards";
 import { AiRewritesModule } from "@/components/site/ai-rewrites-module";
+import { AiVisibilityPanel } from "@/components/site/ai-visibility-panel";
 import {
   CompetitorsModule,
   MonitoringModule,
@@ -126,6 +127,29 @@ function getWorkspaceCopy(locale: "en" | "ar", audience: "owner" | "consultant")
         copy: "نسخ",
         copied: "تم النسخ",
         noKey: "أضف مفتاح مزود ذكاء (MISTRAL_API_KEY أو OPENAI_API_KEY) لإنشاء الصياغات.",
+      },
+      aiVisibility: {
+        title: "الظهور في الذكاء (AEO)",
+        description: "مدى سهولة قراءة وفهم واستشهاد أدوات الذكاء — ChatGPT و Perplexity و Google AI — بهذا الموقع.",
+        scoreLabel: "الظهور في الذكاء",
+        sigSchema: "بيانات قابلة للاستشهاد",
+        sigFaq: "أسئلة وأجوبة",
+        sigClarity: "صفحات واضحة",
+        sigExtractable: "قابلة للاستخراج",
+        faqYes: "نعم",
+        faqNo: "لا",
+        actionsTitle: "تحسين الاستشهاد بالذكاء",
+        testTitle: "اختبار استشهاد حي بالذكاء",
+        testDescription: "نسأل نموذج ذكاء إن كان يستطيع الاستشهاد بكل صفحة اعتماداً على محتواها فقط.",
+        run: "تشغيل الاختبار",
+        running: "جارٍ الاختبار…",
+        retest: "إعادة الاختبار",
+        citeYes: "قابلة",
+        citePartly: "جزئياً",
+        citeNo: "غير قابلة",
+        whatItOffers: "ما يراه الذكاء",
+        missing: "ينقص للاستشهاد",
+        noKey: "أضف مفتاح مزود ذكاء (MISTRAL_API_KEY أو OPENAI_API_KEY) لتشغيل الاختبار الحي.",
       },
       links: {
         health: "صحة الروابط",
@@ -264,6 +288,29 @@ function getWorkspaceCopy(locale: "en" | "ar", audience: "owner" | "consultant")
       copy: "Copy",
       copied: "Copied",
       noKey: "Add an AI provider key (MISTRAL_API_KEY or OPENAI_API_KEY) to generate rewrites.",
+    },
+    aiVisibility: {
+      title: "AI visibility (AEO)",
+      description: "How easily AI answer engines — ChatGPT, Perplexity, Google AI — can read, understand, and cite this site.",
+      scoreLabel: "AI visibility",
+      sigSchema: "Citable schema",
+      sigFaq: "FAQ / Q&A",
+      sigClarity: "Readable pages",
+      sigExtractable: "Extractable",
+      faqYes: "Yes",
+      faqNo: "No",
+      actionsTitle: "Improve AI citation",
+      testTitle: "Live AI citation test",
+      testDescription: "Ask an AI model whether it could cite each page — using only the page's own content.",
+      run: "Run AI test",
+      running: "Testing…",
+      retest: "Re-test",
+      citeYes: "Citable",
+      citePartly: "Partly",
+      citeNo: "Not citable",
+      whatItOffers: "What AI sees",
+      missing: "Missing for citation",
+      noKey: "Add an AI provider key (MISTRAL_API_KEY or OPENAI_API_KEY) to run the live test.",
     },
     links: {
       health: "Link health",
@@ -829,6 +876,7 @@ export function SiteWorkspace() {
 
           {/* AI Readiness */}
           <TabsContent value="ai" className="space-y-4 pt-4">
+            <AiVisibilityPanel crawlDocId={crawlResult._id} pages={pages} copy={copy} locale={locale} />
             <section className={SURFACE}>
               <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-5">
                 <ScoreStat label={copy.metrics.extractable} value={summary.ai.extractablePageCount} icon={Wrench} />

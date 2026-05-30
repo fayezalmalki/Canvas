@@ -199,4 +199,16 @@ export default defineSchema({
     provider: v.union(v.string(), v.null()),
     createdAt: v.number(),
   }).index("by_crawl_page_locale", ["crawlId", "pageUrl", "locale"]),
+
+  aeoTests: defineTable({
+    crawlId: v.id("crawls"),
+    pageUrl: v.string(),
+    locale: v.union(v.literal("en"), v.literal("ar")),
+    whatItOffers: v.string(),
+    couldCiteConfidently: v.union(v.literal("yes"), v.literal("partly"), v.literal("no")),
+    confidence: v.number(),
+    missingForCitation: v.array(v.string()),
+    detectedEntities: v.array(v.string()),
+    createdAt: v.number(),
+  }).index("by_crawl_page_locale", ["crawlId", "pageUrl", "locale"]),
 });
