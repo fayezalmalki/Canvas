@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { AuthButton } from "@/components/auth/auth-button";
 import { createCrawlStoragePlan } from "@/lib/crawl-storage";
 import { runGuardedConvexSave } from "@/lib/convex-save-error";
 import type { CrawlPageResult, CrawlResult } from "@/types/canvas";
@@ -220,6 +221,7 @@ export default function Home() {
     <div className="min-h-full bg-background px-4 py-6">
       <div className="mx-auto w-full max-w-xl">
         <div className="flex items-center justify-end gap-2">
+          <AuthButton locale={locale} />
           <button
             onClick={() => setLocale(locale === "en" ? "ar" : "en")}
             className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-border/60 bg-card text-muted-foreground transition-colors hover:text-foreground"
