@@ -4,6 +4,7 @@ import type { ProductData } from "@/types/canvas";
 import { Input } from "@/components/ui/input";
 import { isInStock, isOutOfStock } from "@/components/site/products-panel";
 import { ScoreStat, RoadmapPlaceholder, SURFACE } from "@/components/site/workspace-cards";
+import { ChangeSummaryPanel } from "@/components/site/change-summary-panel";
 import type { WorkspaceCopy } from "@/components/site/site-workspace";
 import {
   Bot,
@@ -126,9 +127,11 @@ export function PriceStockModule({
 export function MonitoringModule({
   copy,
   pagesAnalyzed,
+  crawlId,
 }: {
   copy: WorkspaceCopy;
   pagesAnalyzed: number;
+  crawlId: string;
 }) {
   return (
     <section className="space-y-4">
@@ -139,11 +142,15 @@ export function MonitoringModule({
           <span className="text-muted-foreground">{copy.monitoring.baselineNote(pagesAnalyzed)}</span>
         </div>
       </div>
+
+      {/* Snapshot diff: "what changed since the previous crawl of this site". */}
+      <ChangeSummaryPanel slug={crawlId} />
+
       <RoadmapPlaceholder
         icon={Radar}
-        title={copy.monitoring.title}
-        description={copy.monitoring.description}
-        points={copy.monitoring.points}
+        title={copy.monitoring.scheduleTitle}
+        description={copy.monitoring.scheduleDescription}
+        points={copy.monitoring.schedulePoints}
         badge={copy.comingSoon}
       />
     </section>

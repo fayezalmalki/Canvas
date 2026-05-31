@@ -1,7 +1,8 @@
-import { mutation, query, type MutationCtx } from "./_generated/server";
-import type { Id } from "./_generated/dataModel";
+import { mutation, query, type MutationCtx, type QueryCtx } from "./_generated/server";
+import type { Doc, Id } from "./_generated/dataModel";
 import { getAuthUserId } from "@convex-dev/auth/server";
 import { v } from "convex/values";
+import { computeCrawlDiff, type CrawlSnapshotInput } from "./crawlDiff";
 
 const outgoingLinkValidator = v.object({
   url: v.string(),
@@ -575,4 +576,65 @@ export const listAeoTestsForCrawl = query({
       .query("aeoTests")
       .withIndex("by_crawl_page_locale", (q) => q.eq("crawlId", args.crawlId))
       .collect(),
+});
+
+// Shape a crawl doc + its pages into the dependency-free snapshot the diff
+// helper consumes. Shared by getCrawlDiff and (Unit 6) the alert action.
+async function toSnapshot(ctx: QueryCtx, crawl: Doc<"crawls">): Promise<CrawlSnapshotInput> {
+  const pages = await ctx.db
+    .query("pages")
+    .withIndex("by_crawl_id", (q) => q.eq("crawlId", crawl._id))
+    .collect();
+  return {
+    createdAt: crawl.createdAt,
+    slug: crawl.slug,
+    pagesCount: crawl.pagesCount,
+    brokenLinks: (crawl.brokenLinks ?? []).map((b) => ({ url: b.url, statusCode: b.statusCode })),
+    redirectChains: (crawl.redirectChains ?? []).map((r) => ({ from: r.from, to: r.to })),
+    pages: pages.map((p) => ({
+      url: p.url,
+      title: p.title,
+      wordCount: p.seo?.wordCount ?? 0,
+      statusCode: p.seo?.statusCode ?? 0,
+    })),
+  };
+}
+
+// "What changed since the previous crawl of this site." Resolves the crawl by
+// slug, finds the most recent earlier crawl of the same rootUrl, and diffs
+// them. Returns hasPrevious=false for a site's first-ever crawl (the baseline).
+export const getCrawlDiff = query({
+  args: { slug: v.string() },
+  handler: async (ctx, args) => {
+    let current = await ctx.db
+      .query("crawls")
+      .withIndex("by_slug", (q) => q.eq("slug", args.slug))
+      .first();
+    if (!current) {
+      try {
+        const doc = await ctx.db.get(args.slug as Id<"crawls">);
+        if (doc && "rootUrl" in doc) current = doc;
+      } catch {
+        // not a valid id — leave current null
+      }
+    }
+    if (!current) return null;
+
+    // Most recent crawl of the same site strictly before this one.
+    const earlier = await ctx.db
+      .query("crawls")
+      .withIndex("by_root_url", (q) => q.eq("rootUrl", current.rootUrl))
+      .order("desc")
+      .collect();
+    const previous = earlier.find((c) => c.createdAt < current.createdAt) ?? null;
+
+    const currentSnap = await toSnapshot(ctx, current);
+    const previousSnap = previous ? await toSnapshot(ctx, previous) : null;
+
+    return {
+      rootUrl: current.rootUrl,
+      totalSnapshots: earlier.length,
+      ...computeCrawlDiff(currentSnap, previousSnap),
+    };
+  },
 });
