@@ -1,4 +1,5 @@
 import { defineSchema, defineTable } from "convex/server";
+import { authTables } from "@convex-dev/auth/server";
 import { v } from "convex/values";
 
 const robotsSitemapValidator = v.object({
@@ -23,6 +24,17 @@ const robotsSitemapValidator = v.object({
 });
 
 export default defineSchema({
+  ...authTables,
+
+  projects: defineTable({
+    ownerId: v.id("users"),
+    rootUrl: v.string(),
+    label: v.optional(v.string()),
+    cadence: v.union(v.literal("off"), v.literal("daily"), v.literal("weekly")),
+    alertEmail: v.optional(v.string()),
+    createdAt: v.number(),
+  }).index("by_owner", ["ownerId"]).index("by_cadence", ["cadence"]),
+
   crawls: defineTable({
     rootUrl: v.string(),
     slug: v.optional(v.string()),
@@ -40,9 +52,12 @@ export default defineSchema({
       statusCodes: v.array(v.number()),
     }))),
     robotsSitemap: v.optional(robotsSitemapValidator),
+    ownerId: v.optional(v.id("users")),
+    projectId: v.optional(v.id("projects")),
     createdAt: v.number(),
   }).index("by_root_url", ["rootUrl"])
-    .index("by_slug", ["slug"]),
+    .index("by_slug", ["slug"])
+    .index("by_owner", ["ownerId"]),
 
   pages: defineTable({
     crawlId: v.id("crawls"),

@@ -8,7 +8,9 @@
  * @module
  */
 
+import type * as auth from "../auth.js";
 import type * as crawls from "../crawls.js";
+import type * as projects from "../projects.js";
 
 import type {
   ApiFromModules,
@@ -17,7 +19,9 @@ import type {
 } from "convex/server";
 
 declare const fullApi: ApiFromModules<{
+  auth: typeof auth;
   crawls: typeof crawls;
+  projects: typeof projects;
 }>;
 
 /**

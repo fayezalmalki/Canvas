@@ -1,5 +1,6 @@
 import { mutation, query, type MutationCtx } from "./_generated/server";
 import type { Id } from "./_generated/dataModel";
+import { getAuthUserId } from "@convex-dev/auth/server";
 import { v } from "convex/values";
 
 const outgoingLinkValidator = v.object({
@@ -163,6 +164,7 @@ export const createCrawl = mutation({
   args: crawlMetadataArgs,
   handler: async (ctx, args) => {
     const slug = await generateUniqueSlug(ctx);
+    const ownerId = await getAuthUserId(ctx);
 
     const crawlId = await ctx.db.insert("crawls", {
       rootUrl: args.rootUrl,
@@ -172,6 +174,7 @@ export const createCrawl = mutation({
       brokenLinks: args.brokenLinks,
       redirectChains: args.redirectChains,
       robotsSitemap: args.robotsSitemap,
+      ownerId: ownerId ?? undefined,
       createdAt: Date.now(),
     });
 
@@ -439,11 +442,16 @@ export const getAnalysis = query({
 export const listRecentCrawls = query({
   args: {},
   handler: async (ctx) => {
-    // Get the 20 most recent crawls
+    // Privacy: only return the signed-in user's own audits (was previously a
+    // global list of everyone's crawls). Anonymous visitors get nothing.
+    const ownerId = await getAuthUserId(ctx);
+    if (!ownerId) return [];
+
     const crawls = await ctx.db
       .query("crawls")
+      .withIndex("by_owner", (q) => q.eq("ownerId", ownerId))
       .order("desc")
-      .take(20);
+      .take(40);
 
     // Deduplicate by rootUrl (keep only the latest per site)
     const seen = new Set<string>();
@@ -460,6 +468,7 @@ export const listRecentCrawls = query({
           createdAt: crawl.createdAt,
         });
       }
+      if (unique.length >= 20) break;
     }
     return unique;
   },
