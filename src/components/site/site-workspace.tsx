@@ -184,12 +184,12 @@ function getWorkspaceCopy(locale: "en" | "ar", audience: "owner" | "consultant")
         intro: "نلتقط هنا حالة الموقع الحالية كنقطة انطلاق لمتابعة التغييرات.",
         baseline: "تم التقاط نقطة الأساس.",
         baselineNote: (n: number) => `${n} صفحة محفوظة كأساس للمقارنة في الفحوصات القادمة.`,
-        title: "تتبّع تغييرات المحتوى",
-        description: "قريباً: نراقب التغييرات المهمة منذ هذا الفحص.",
-        points: [
-          "كشف تغيّر المحتوى والأسعار والمخزون",
-          "تنبيهات عبر البريد أو داخل التطبيق",
-          "سجل زمني لكل التغييرات",
+        scheduleTitle: "إعادة فحص تلقائية",
+        scheduleDescription: "قريباً: نعيد فحص موقعك تلقائياً وننبّهك عند حدوث تغييرات مهمة.",
+        schedulePoints: [
+          "جدولة يومية أو أسبوعية لكل موقع",
+          "تنبيهات عبر البريد عند التغييرات المهمة",
+          "سجل زمني لكل الفحوصات",
         ],
       },
       competitors: {
@@ -345,12 +345,12 @@ function getWorkspaceCopy(locale: "en" | "ar", audience: "owner" | "consultant")
       intro: "This captures the site's current state as a baseline for tracking changes over time.",
       baseline: "Baseline captured.",
       baselineNote: (n: number) => `${n} pages saved as the baseline for future crawls to compare against.`,
-      title: "Content-change tracking",
-      description: "Coming soon: watch for meaningful changes since this crawl.",
-      points: [
-        "Content, price, and stock change detection",
-        "Email or in-app alerts",
-        "A timeline of every change",
+      scheduleTitle: "Automatic re-crawls",
+      scheduleDescription: "Coming soon: re-audit your site on a schedule and alert you when something meaningful changes.",
+      schedulePoints: [
+        "Daily or weekly schedule per site",
+        "Email alerts on meaningful changes",
+        "A timeline of every crawl",
       ],
     },
     competitors: {
@@ -952,7 +952,7 @@ export function SiteWorkspace() {
 
           {/* Monitoring */}
           <TabsContent value="monitoring" className="pt-4">
-            <MonitoringModule copy={copy} pagesAnalyzed={summary.health.pagesAnalyzed} />
+            <MonitoringModule copy={copy} pagesAnalyzed={summary.health.pagesAnalyzed} crawlId={crawlId} />
           </TabsContent>
 
           {/* Competitors */}
